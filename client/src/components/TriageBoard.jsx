@@ -15,6 +15,20 @@ const typeColor = {
   other: 'bg-gray-700 text-gray-300',
 }
 
+function SkeletonCard() {
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 animate-pulse">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="h-3 w-8 bg-gray-700 rounded"/>
+        <div className="h-5 w-16 bg-gray-700 rounded-full"/>
+        <div className="h-5 w-14 bg-gray-700 rounded-full"/>
+      </div>
+      <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"/>
+      <div className="h-3 bg-gray-800 rounded w-24"/>
+    </div>
+  )
+}
+
 export default function TriageBoard({ owner, repo, onSql }) {
   const [issues, setIssues] = useState([])
   const [loading, setLoading] = useState(false)
@@ -52,30 +66,33 @@ export default function TriageBoard({ owner, repo, onSql }) {
 
       {error && <div className="bg-red-900/50 border border-red-700 rounded p-3 text-red-300 text-sm mb-4">{error}</div>}
 
-      {issues.length === 0 && !loading && (
+      {!loading && issues.length === 0 && (
         <div className="text-center text-gray-500 py-20">Click "Run triage" to analyze open issues</div>
       )}
 
       <div className="grid gap-3">
-        {issues.map(issue => (
-          <div key={issue.number} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-gray-500 text-xs">#{issue.number}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${typeColor[issue.type] || typeColor.other}`}>
-                    {issue.type}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${priorityColor[issue.priority]}`}>
-                    {issue.priority}
-                  </span>
+        {loading
+          ? Array(5).fill(0).map((_, i) => <SkeletonCard key={i}/>)
+          : issues.map(issue => (
+            <div key={issue.number} className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-gray-500 text-xs">#{issue.number}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${typeColor[issue.type] || typeColor.other}`}>
+                      {issue.type}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${priorityColor[issue.priority]}`}>
+                      {issue.priority}
+                    </span>
+                  </div>
+                  <p className="text-sm text-white">{issue.summary}</p>
+                  <span className="text-xs text-gray-500 mt-1 inline-block">→ {issue.suggestedLabel}</span>
                 </div>
-                <p className="text-sm text-white">{issue.summary}</p>
-                <span className="text-xs text-gray-500 mt-1 inline-block">→ {issue.suggestedLabel}</span>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        }
       </div>
     </div>
   )

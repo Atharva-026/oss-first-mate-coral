@@ -4,9 +4,19 @@ import TriageBoard from './components/TriageBoard'
 import DuplicatesPanel from './components/DuplicatesPanel'
 import ReleaseNotes from './components/ReleaseNotes'
 import SqlLog from './components/SqlLog'
+import RunHistory from './components/RunHistory'
+
+const getSavedRepo = () => {
+  try {
+    const saved = localStorage.getItem('oss-first-mate-repo')
+    return saved ? JSON.parse(saved) : { owner: 'expressjs', repo: 'express' }
+  } catch {
+    return { owner: 'expressjs', repo: 'express' }
+  }
+}
 
 export default function App() {
-  const [repo, setRepo] = useState({ owner: 'expressjs', repo: 'express' })
+  const [repo, setRepo] = useState(getSavedRepo)
   const [activeTab, setActiveTab] = useState('triage')
   const [sqlLog, setSqlLog] = useState([])
 
@@ -14,7 +24,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
-      {/* Header */}
       <div className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-white">⚓ OSS First Mate</h1>
@@ -23,7 +32,6 @@ export default function App() {
         <RepoForm repo={repo} setRepo={setRepo} />
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-gray-800 px-6 flex gap-1 pt-2">
         {tabs.map(tab => (
           <button
@@ -40,7 +48,7 @@ export default function App() {
         ))}
         <button
           onClick={() => setActiveTab('sql-log')}
-          className={`px-4 py-2 text-sm rounded-t transition-colors ml-auto ${
+          className={`px-4 py-2 text-sm rounded-t transition-colors ${
             activeTab === 'sql-log'
               ? 'bg-gray-800 text-white border-b-2 border-green-500'
               : 'text-gray-400 hover:text-white'
@@ -48,20 +56,24 @@ export default function App() {
         >
           SQL log
         </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`px-4 py-2 text-sm rounded-t transition-colors ${
+            activeTab === 'history'
+              ? 'bg-gray-800 text-white border-b-2 border-purple-500'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          History
+        </button>
       </div>
 
-      {/* Content */}
       <div className="p-6">
-        {activeTab === 'triage' && (
-          <TriageBoard owner={repo.owner} repo={repo.repo} onSql={q => setSqlLog(l => [...l, q])} />
-        )}
-        {activeTab === 'duplicates' && (
-          <DuplicatesPanel owner={repo.owner} repo={repo.repo} onSql={q => setSqlLog(l => [...l, q])} />
-        )}
-        {activeTab === 'release-notes' && (
-          <ReleaseNotes owner={repo.owner} repo={repo.repo} onSql={q => setSqlLog(l => [...l, q])} />
-        )}
+        {activeTab === 'triage' && <TriageBoard owner={repo.owner} repo={repo.repo} onSql={q => setSqlLog(l => [...l, q])} />}
+        {activeTab === 'duplicates' && <DuplicatesPanel owner={repo.owner} repo={repo.repo} onSql={q => setSqlLog(l => [...l, q])} />}
+        {activeTab === 'release-notes' && <ReleaseNotes owner={repo.owner} repo={repo.repo} onSql={q => setSqlLog(l => [...l, q])} />}
         {activeTab === 'sql-log' && <SqlLog queries={sqlLog} />}
+        {activeTab === 'history' && <RunHistory />}
       </div>
     </div>
   )

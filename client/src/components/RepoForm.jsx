@@ -1,15 +1,26 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
+
+const STORAGE_KEY = 'oss-first-mate-repo'
 
 export default function RepoForm({ repo, setRepo }) {
   const [owner, setOwner] = useState(repo.owner)
   const [repoName, setRepoName] = useState(repo.repo)
 
   useEffect(() => {
-    setOwner(repo.owner)
-    setRepoName(repo.repo)
-  }, [repo])
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      setOwner(parsed.owner)
+      setRepoName(parsed.repo)
+      setRepo(parsed)
+    }
+  }, [])
 
-  const handleSubmit = () => setRepo({ owner, repo: repoName })
+  const handleSubmit = () => {
+    const val = { owner, repo: repoName }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(val))
+    setRepo(val)
+  }
 
   return (
     <div className="flex gap-2 items-center">
@@ -24,6 +35,7 @@ export default function RepoForm({ repo, setRepo }) {
         value={repoName}
         onChange={e => setRepoName(e.target.value)}
         placeholder="repo"
+        onKeyDown={e => e.key === 'Enter' && handleSubmit()}
         className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white w-40 focus:outline-none focus:border-blue-500"
       />
       <button

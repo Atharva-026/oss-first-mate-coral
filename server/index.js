@@ -24,6 +24,7 @@ connectDB();
 app.use('/api/triage', require('./routes/triage'));
 app.use('/api/duplicates', require('./routes/duplicates'));
 app.use('/api/release-notes', require('./routes/releaseNotes'));
+app.use('/api/history', require('./routes/history'));
 
 // Health check
 app.get('/api/health', (req, res) => {
