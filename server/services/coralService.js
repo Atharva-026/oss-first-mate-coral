@@ -1,12 +1,12 @@
 const { spawn } = require('child_process');
 
-const CORAL_PATH = 'D:\\coral.exe';
+const CORAL_PATH = process.env.CORAL_PATH || 'coral';
 
 const runQuery = (sql) => {
   return new Promise((resolve, reject) => {
     const child = spawn(CORAL_PATH, ['sql', '--format', 'json', sql], {
-      cwd: 'D:\\oss-first-mate',
-      env: process.env
+      cwd: process.cwd(),
+      env: process.env,
     });
 
     let stdout = '';
