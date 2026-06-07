@@ -372,7 +372,7 @@ function StepCard({ step, index }) {
   )
 }
 
-export default function LandingPage({ onStart }) {
+export default function LandingPage({ onStart, onDocs }) {
   const hasLaunched = useRef(false)
   const [scrolled, setScrolled] = useState(false)
   const containerRef = useRef(null)
@@ -585,8 +585,24 @@ export default function LandingPage({ onStart }) {
               Launch the dashboard
               <span style={{ fontSize: 16 }}>→</span>
             </button>
-            <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>
-              or click the planet above
+            <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
+              <span>or click the planet above</span>
+              <button
+                onClick={onDocs}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#93c5fd',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '6px 10px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = 0.9 }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = 1 }}
+              >
+                Docs →
+              </button>
             </div>
           </div>
         </div>

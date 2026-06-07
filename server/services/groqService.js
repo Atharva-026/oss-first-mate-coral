@@ -1,8 +1,10 @@
 const Groq = require('groq-sdk');
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// Each function accepts apiKey so we use the user's own key
+const getClient = (apiKey) => new Groq({ apiKey });
 
-const analyzeIssues = async (issues) => {
+const analyzeIssues = async (issues, apiKey) => {
+  const groq = getClient(apiKey);
   const prompt = `You are an OSS maintainer assistant. Analyze these GitHub issues and for each one return:
 - type: one of [bug, feature, question, docs, other]
 - priority: one of [high, medium, low]
@@ -21,12 +23,13 @@ Respond with a JSON array only, no extra text. Each item must have: number, type
     max_tokens: 2000,
   });
 
-  const text = response.choices[0].message.content;
+  const text  = response.choices[0].message.content;
   const clean = text.replace(/```json|```/g, '').trim();
   return JSON.parse(clean);
 };
 
-const findDuplicates = async (issues) => {
+const findDuplicates = async (issues, apiKey) => {
+  const groq = getClient(apiKey);
   const prompt = `You are an OSS maintainer assistant. From this list of GitHub issues, identify pairs that are likely duplicates based on title and body similarity.
 
 Issues:
@@ -42,12 +45,13 @@ If no duplicates found, return an empty array [].`;
     max_tokens: 1000,
   });
 
-  const text = response.choices[0].message.content;
+  const text  = response.choices[0].message.content;
   const clean = text.replace(/```json|```/g, '').trim();
   return JSON.parse(clean);
 };
 
-const generateReleaseNotes = async (prs) => {
+const generateReleaseNotes = async (prs, apiKey) => {
+  const groq = getClient(apiKey);
   const prompt = `You are a technical writer. Generate clean, well-structured release notes from these merged pull requests.
 
 PRs:
@@ -66,7 +70,8 @@ Only include sections that have items. Be concise. Start directly with the markd
   return response.choices[0].message.content;
 };
 
-const analyzeSlackGithubLinks = async (issues, messages) => {
+const analyzeSlackGithubLinks = async (issues, messages, apiKey) => {
+  const groq = getClient(apiKey);
   const prompt = `You are an OSS maintainer assistant. Match these Slack messages to related GitHub issues.
 
 GitHub issues:
@@ -85,7 +90,7 @@ Only include matches where relevance is medium or high. If no matches found, ret
     max_tokens: 1000,
   });
 
-  const text = response.choices[0].message.content;
+  const text  = response.choices[0].message.content;
   const clean = text.replace(/```json|```/g, '').trim();
   return JSON.parse(clean);
 };

@@ -1,6 +1,12 @@
 import axios from 'axios'
 
-const api = axios.create({ timeout: 120000 })
+const BASE_URL = import.meta.env.VITE_API_URL || ''
+
+const api = axios.create({
+  baseURL: BASE_URL,
+  timeout: 120000,
+  withCredentials: true,
+})
 
 export const triageIssues = (owner, repo) =>
   api.post('/api/triage', { owner, repo })
