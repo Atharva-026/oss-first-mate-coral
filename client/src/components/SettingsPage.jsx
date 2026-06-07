@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import PlanetIcon from './PlanetIcon'
+import ChatWidget from './ChatWidget'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
@@ -56,7 +58,10 @@ export default function SettingsPage({ user, onBack }) {
         <button onClick={onBack} style={{ background: 'none', border: '1px solid #1f2937', borderRadius: 8, color: '#6b7280', padding: '6px 12px', fontSize: 13, cursor: 'pointer' }}>
           ← Back
         </button>
-        <span style={{ fontWeight: 700, fontSize: 15 }}>⚓ Settings</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontWeight: 700, fontSize: 15 }}>
+          <PlanetIcon size={18} color="#fff" />
+          <span>Settings</span>
+        </div>
       </header>
 
       <main style={{ maxWidth: 560, margin: '48px auto', padding: '0 24px' }}>
@@ -117,6 +122,7 @@ export default function SettingsPage({ user, onBack }) {
           </>
         )}
       </main>
+      <ChatWidget />
     </div>
   )
 }

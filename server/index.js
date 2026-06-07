@@ -28,14 +28,24 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Rate limiting for heavy routes
 const apiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, max: 10,
   message: { error: 'Too many requests. You can make 10 requests per hour.' },
   standardHeaders: true, legacyHeaders: false,
 });
+
+// Lighter rate limit for chat — 30 messages per hour
+const chatLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 30,
+  message: { error: 'Too many chat messages. Please wait before sending more.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+
 app.use('/api/triage', apiLimiter);
 app.use('/api/duplicates', apiLimiter);
 app.use('/api/release-notes', apiLimiter);
+app.use('/api/chat', chatLimiter);
 
 connectDB();
 
@@ -44,8 +54,11 @@ const requireAuth = (req, res, next) => {
   res.status(401).json({ error: 'Please log in to use OSS First Mate' });
 };
 
-// Auth routes (no login needed)
+// Auth routes — no login needed
 app.use('/auth', require('./routes/auth'));
+
+// Chat — no login needed so docs page users can also use it
+app.use('/api/chat', require('./routes/chat'));
 
 // Protected routes
 app.use('/api/triage',        requireAuth, require('./routes/triage'));

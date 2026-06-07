@@ -1,5 +1,6 @@
 import Spline from '@splinetool/react-spline'
 import { useRef, useState, useEffect } from 'react'
+import ChatWidget from './ChatWidget'
 
 const steps = [
   {
@@ -614,6 +615,7 @@ export default function LandingPage({ onStart, onDocs }) {
           50% { transform: translateY(6px); }
         }
       `}</style>
+      <ChatWidget />
     </div>
   )
 }

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import PlanetIcon from './PlanetIcon'
+import ChatWidget from './ChatWidget'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
@@ -39,7 +41,7 @@ export default function ApiKeysSetup({ user, onComplete }) {
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>⚓</div>
+          <div style={{ fontSize: 36, marginBottom: 12 }}><PlanetIcon size={36} color="#fff" /></div>
           <h1 style={{ color: '#f1f5f9', fontSize: 24, fontWeight: 700, margin: '0 0 8px' }}>
             Welcome, {user?.name?.split(' ')[0]}!
           </h1>
@@ -128,6 +130,7 @@ export default function ApiKeysSetup({ user, onComplete }) {
             🔒 Keys are encrypted with AES-256 before storing. You can update them anytime in Settings.
           </p>
         </div>
+        <ChatWidget />
       </div>
     </div>
   )

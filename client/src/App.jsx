@@ -6,6 +6,8 @@ import ReleaseNotes  from './components/ReleaseNotes'
 import SqlLog        from './components/SqlLog'
 import RunHistory    from './components/RunHistory'
 import SlackInsights from './components/SlackInsights'
+import PlanetIcon    from './components/PlanetIcon'
+import ChatWidget    from './components/ChatWidget'
 import LandingPage   from './components/LandingPage'
 import DocsPage      from './components/DocsPage'
 import LoginPage     from './LoginPage'
@@ -48,12 +50,18 @@ export default function App() {
       .catch(() => setUser(null))
   }, [])
 
+  useEffect(() => {
+    const handler = () => setPage('settings')
+    window.addEventListener('oss:goto-settings', handler)
+    return () => window.removeEventListener('oss:goto-settings', handler)
+  }, [])
+
   // Loading
   if (user === undefined) {
     return (
       <div style={{ minHeight: '100vh', background: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'system-ui' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>⚓</div>
+          <div style={{ fontSize: 32, marginBottom: 12 }}><PlanetIcon size={32} color="#fff" /></div>
           <div style={{ color: '#6b7280', fontSize: 14 }}>Loading...</div>
         </div>
       </div>
@@ -71,6 +79,7 @@ export default function App() {
           setPage('dashboard')
         }}
         onDocs={() => setPage('docs')}
+        planetIcon={<PlanetIcon size={28} color="#fff" />}
       />
     )
   }
@@ -84,12 +93,13 @@ export default function App() {
           setPage('dashboard')
         }}
         onHome={() => setPage('landing')}
+        planetIcon={<PlanetIcon size={28} color="#fff" />}
       />
     )
   }
 
   if (page === 'login') {
-    return <LoginPage />
+    return <LoginPage planetIcon={<PlanetIcon size={28} color="#fff" />} />
     // After Google OAuth redirect, page reloads → useEffect fires → user set
     // We handle post-login routing in a separate effect below
   }
@@ -132,9 +142,12 @@ export default function App() {
               ← Home
             </button>
             <div style={{ width: 1, height: 20, backgroundColor: '#1f2937' }} />
-            <div>
-              <div style={{ color: '#ffffff', fontWeight: 700, fontSize: 15 }}>OSS First Mate</div>
-              <div style={{ color: '#4b5563', fontSize: 11 }}>AI-powered OSS maintainer assistant</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <PlanetIcon size={20} color="#fff" />
+              <div>
+                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: 15 }}>OSS First Mate</div>
+                <div style={{ color: '#4b5563', fontSize: 11 }}>AI-powered OSS maintainer assistant</div>
+              </div>
             </div>
           </div>
 
@@ -180,6 +193,7 @@ export default function App() {
         {activeTab === 'sql-log'       && <SqlLog queries={sqlLog} />}
         {activeTab === 'history'       && <RunHistory />}
       </main>
+      <ChatWidget />
     </div>
   )
 }

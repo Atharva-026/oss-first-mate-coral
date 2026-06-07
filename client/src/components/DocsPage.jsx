@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
+import PlanetIcon from './PlanetIcon'
+import ChatWidget from './ChatWidget'
 
 // ── Animated star field ──────────────────────────────────────────────────────
 function StarField() {
-  const canvasRef = useRef(null)
   useEffect(() => {
-    const canvas = canvasRef.current
+    const canvas = document.getElementById('docs-stars')
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     let animId
@@ -15,7 +16,10 @@ function StarField() {
       a: Math.random(),
       da: (Math.random() - 0.5) * 0.003,
     }))
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
+    const resize = () => {
+      canvas.width  = window.innerWidth
+      canvas.height = window.innerHeight
+    }
     resize()
     window.addEventListener('resize', resize)
     const draw = () => {
@@ -31,62 +35,400 @@ function StarField() {
       animId = requestAnimationFrame(draw)
     }
     draw()
-    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize) }
+    return () => {
+      cancelAnimationFrame(animId)
+      window.removeEventListener('resize', resize)
+    }
   }, [])
-  return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }} />
+  return (
+    <canvas
+      id="docs-stars"
+      style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}
+    />
+  )
 }
 
-// ── Floating orb ─────────────────────────────────────────────────────────────
-function Orb({ size, color, top, left, delay, blur }) {
+function Orb({ size, color, top, left, delay }) {
   return (
     <div style={{
       position: 'fixed', width: size, height: size, borderRadius: '50%',
-      background: color, top, left, filter: `blur(${blur || size / 2}px)`,
-      opacity: 0.18, zIndex: 0, pointerEvents: 'none',
+      background: color, top, left,
+      filter: `blur(${size / 2}px)`,
+      opacity: 0.15, zIndex: 0, pointerEvents: 'none',
       animation: `floatOrb 8s ease-in-out ${delay || 0}s infinite alternate`,
     }} />
   )
 }
 
-// ── Section IDs ───────────────────────────────────────────────────────────────
 const SECTIONS = [
   { id: 'what',       label: 'What is OSS First Mate' },
+  { id: 'dashboard',  label: 'What you will see' },
   { id: 'how',        label: 'How it works' },
   { id: 'features',   label: 'Features' },
-  { id: 'quickstart', label: 'Quick start' },
-  { id: 'api-keys',   label: 'Bring your own API keys' },
+  { id: 'api-keys',   label: 'API keys setup' },
   { id: 'coral',      label: 'How Coral powers it' },
+  { id: 'quickstart', label: 'Try it yourself' },
   { id: 'faq',        label: 'FAQ' },
 ]
 
-const CODE = {
-  install: `# Install Coral (Mac)
-brew install withcoral/tap/coral
+function CodeBlock({ code, lang }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <div style={{ position: 'relative', margin: '16px 0', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(99,102,241,0.2)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 14px', background: 'rgba(99,102,241,0.07)', borderBottom: '1px solid rgba(99,102,241,0.1)' }}>
+        <span style={{ fontSize: 10, color: '#6366f1', letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600 }}>{lang}</span>
+        <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+          style={{ background: 'transparent', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 5, color: copied ? '#22c55e' : '#a5b4fc', fontSize: 11, padding: '2px 8px', cursor: 'pointer' }}>
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <pre style={{ margin: 0, padding: '16px', background: 'rgba(3,7,18,0.85)', color: '#e2e8f0', fontSize: 12.5, lineHeight: 1.7, overflowX: 'auto', fontFamily: '"Fira Code", "Cascadia Code", monospace' }}>
+        <code>{code}</code>
+      </pre>
+    </div>
+  )
+}
 
-# Windows — download from:
-# https://github.com/withcoral/coral/releases
+function Step({ num, title, desc, color }) {
+  return (
+    <div style={{ display: 'flex', gap: 16, marginBottom: 14, padding: '16px 18px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: color || '#6366f1', fontFamily: 'monospace', flexShrink: 0, paddingTop: 2, minWidth: 24 }}>{num}</div>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 13.5, color: '#f1f5f9', marginBottom: 3 }}>{title}</div>
+        {desc && <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{desc}</div>}
+      </div>
+    </div>
+  )
+}
 
-# Add GitHub as a source
-coral source add github
-# → Enter your GitHub Personal Access Token when prompted`,
+function Section({ id, title, children }) {
+  return (
+    <section id={id} style={{ marginBottom: 64, scrollMarginTop: 72 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+        <div style={{ width: 3, height: 24, background: 'linear-gradient(180deg,#6366f1,#a855f7)', borderRadius: 2, flexShrink: 0 }} />
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#f1f5f9', letterSpacing: -0.4 }}>{title}</h2>
+      </div>
+      {children}
+    </section>
+  )
+}
 
-  env: `# .env (root of project)
-GROQ_API_KEY=your_groq_key_here
-GITHUB_TOKEN=your_github_pat_here
-MONGODB_URI=mongodb+srv://...
-CORAL_PATH=/usr/local/bin/coral   # or C:\\coral\\coral.exe on Windows
-PORT=5000
-CLIENT_URL=http://localhost:5173`,
+function FaqItem({ q, a }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        width: '100%', textAlign: 'left', background: 'none', border: 'none',
+        color: open ? '#a5b4fc' : '#e2e8f0', fontSize: 13.5, fontWeight: 600,
+        padding: '14px 0', cursor: 'pointer',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        {q}
+        <span style={{ color: '#6b7280', fontSize: 16, transform: open ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0, marginLeft: 12 }}>+</span>
+      </button>
+      {open && <p style={{ margin: '0 0 14px', color: '#94a3b8', fontSize: 13, lineHeight: 1.7 }}>{a}</p>}
+    </div>
+  )
+}
 
-  run: `# Terminal 1 — backend
-cd server && npm install && nodemon index.js
+function ApiKeyCard({ title, required, color, steps, link, linkLabel }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ marginBottom: 12, borderRadius: 12, border: `1px solid ${open ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.06)'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        width: '100%', textAlign: 'left', background: open ? 'rgba(99,102,241,0.06)' : 'rgba(255,255,255,0.02)',
+        border: 'none', padding: '16px 18px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{title}</span>
+          <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, background: required ? 'rgba(239,68,68,0.1)' : 'rgba(107,114,128,0.15)', color: required ? '#fca5a5' : '#6b7280', fontWeight: 600 }}>
+            {required ? 'required' : 'optional'}
+          </span>
+        </div>
+        <span style={{ color: '#6b7280', fontSize: 14, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>v</span>
+      </button>
+      {open && (
+        <div style={{ padding: '0 18px 18px', background: 'rgba(255,255,255,0.01)' }}>
+          <a href={`https://${link}`} target="_blank" style={{ display: 'inline-block', marginBottom: 14, fontSize: 12, color: '#6366f1' }}>
+            Open {linkLabel} →
+          </a>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: color, fontFamily: 'monospace', flexShrink: 0, paddingTop: 1, minWidth: 20 }}>{String(i + 1).padStart(2, '0')}</span>
+              <span style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{s}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
-# Terminal 2 — frontend
-cd client && npm install && npm run dev
+function TabCard({ title, desc, color }) {
+  return (
+    <div style={{ padding: '18px 20px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+        <span style={{ fontWeight: 700, fontSize: 13.5, color: '#f1f5f9' }}>{title}</span>
+      </div>
+      <p style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{desc}</p>
+    </div>
+  )
+}
 
-# Open → http://localhost:5173`,
+export default function DocsPage({ onGetStarted, onHome }) {
+  const [activeSection, setActiveSection] = useState('what')
 
-  sql: `-- Triage: fetch open issues
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) setActiveSection(e.target.id) }),
+      { rootMargin: '-30% 0px -60% 0px' }
+    )
+    SECTIONS.forEach(s => { const el = document.getElementById(s.id); if (el) observer.observe(el) })
+    return () => observer.disconnect()
+  }, [])
+
+  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#030712', color: '#f1f5f9', fontFamily: '"DM Sans", system-ui, sans-serif', position: 'relative' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+        @keyframes floatOrb { from { transform: translateY(0px); } to { transform: translateY(-30px); } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #030712; }
+        ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.25); border-radius: 3px; }
+      `}</style>
+
+      <StarField />
+      <Orb size={500} color="radial-gradient(circle,#6366f1,transparent)" top="-100px" left="-150px" delay={0} />
+      <Orb size={350} color="radial-gradient(circle,#a855f7,transparent)" top="45%" left="72%" delay={3} />
+      <Orb size={280} color="radial-gradient(circle,#06b6d4,transparent)" top="80%" left="8%" delay={5} />
+
+      {/* Navbar */}
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+        background: 'rgba(3,7,18,0.88)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(99,102,241,0.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 28px', height: 54,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={onHome} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 12, cursor: 'pointer' }}>
+            Back
+          </button>
+          <div style={{ width: 1, height: 16, background: '#1f2937' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PlanetIcon size={14} color="#fff" />
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>OSS First Mate</span>
+          </div>
+          <span style={{ padding: '2px 8px', borderRadius: 5, background: 'rgba(99,102,241,0.14)', color: '#a5b4fc', fontSize: 10, fontWeight: 700, letterSpacing: 0.5 }}>DOCS</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <a href="https://github.com/Atharva-026/oss-first-mate-coral" target="_blank" style={{ color: '#6b7280', fontSize: 12, textDecoration: 'none' }}>GitHub</a>
+          <button onClick={onGetStarted} style={{ background: 'linear-gradient(135deg,#6366f1,#a855f7)', border: 'none', color: '#fff', borderRadius: 7, padding: '7px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+            Get Started
+          </button>
+        </div>
+      </nav>
+
+      <div style={{ display: 'flex', paddingTop: 54 }}>
+        {/* Sidebar */}
+        <aside style={{
+          width: 228, flexShrink: 0, position: 'fixed', top: 54, bottom: 0,
+          overflowY: 'auto', padding: '24px 0', zIndex: 40,
+          background: 'rgba(3,7,18,0.75)', backdropFilter: 'blur(12px)',
+          borderRight: '1px solid rgba(99,102,241,0.08)',
+        }}>
+          <div style={{ padding: '0 18px 10px', fontSize: 9, letterSpacing: 2, color: '#374151', textTransform: 'uppercase', fontWeight: 700 }}>
+            Documentation
+          </div>
+          {SECTIONS.map(s => (
+            <button key={s.id} onClick={() => scrollTo(s.id)} style={{
+              display: 'block', width: '100%', textAlign: 'left',
+              padding: '8px 18px', fontSize: 13, fontWeight: activeSection === s.id ? 600 : 400,
+              color: activeSection === s.id ? '#a5b4fc' : '#6b7280',
+              background: activeSection === s.id ? 'rgba(99,102,241,0.09)' : 'transparent',
+              borderLeft: activeSection === s.id ? '2px solid #6366f1' : '2px solid transparent',
+              border: 'none',
+              borderLeft: activeSection === s.id ? '2px solid #6366f1' : '2px solid transparent',
+              cursor: 'pointer', transition: 'all 0.12s',
+            }}>
+              {s.label}
+            </button>
+          ))}
+          <div style={{ margin: '20px 18px 0', padding: '14px', background: 'rgba(99,102,241,0.05)', borderRadius: 8, border: '1px solid rgba(99,102,241,0.12)' }}>
+            <div style={{ fontSize: 11, color: '#a5b4fc', fontWeight: 700, marginBottom: 5 }}>Need help?</div>
+            <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.5 }}>Use the chat widget in the bottom right corner for instant answers.</div>
+          </div>
+        </aside>
+
+        {/* Main */}
+        <main style={{ marginLeft: 228, flex: 1, padding: '44px 60px 80px', maxWidth: 820, animation: 'fadeIn 0.4s ease', position: 'relative', zIndex: 1 }}>
+
+          {/* Hero */}
+          <div style={{ marginBottom: 56 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 14px', borderRadius: 999, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.07)', color: '#a5b4fc', fontSize: 10, letterSpacing: 2, marginBottom: 18, textTransform: 'uppercase' }}>
+              Documentation v1.0
+            </div>
+            <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: -1.2, lineHeight: 1.15, margin: '0 0 14px', background: 'linear-gradient(135deg,#f1f5f9 0%,#a5b4fc 60%,#c084fc 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              OSS First Mate
+            </h1>
+            <p style={{ fontSize: 15, color: '#94a3b8', lineHeight: 1.7, maxWidth: 520, margin: 0 }}>
+              AI-powered GitHub issue triage for open source maintainers. Powered by Coral SQL, Groq LLM, and your own API keys.
+            </p>
+          </div>
+
+          {/* What is it */}
+          <Section id="what" title="What is OSS First Mate">
+            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14 }}>
+              OSS First Mate is a dashboard that helps open source maintainers manage the never-ending flow of GitHub issues. Instead of manually reading every issue, the tool queries GitHub as a SQL database using <strong style={{ color: '#a5b4fc' }}>Coral</strong>, feeds the results to a large language model, and gives you actionable classification in seconds.
+            </p>
+            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14 }}>
+              Every data fetch is transparent. The SQL Log tab shows the exact queries that ran. No black boxes, no hidden API calls.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 20 }}>
+              {[
+                { label: 'Fast', desc: 'Triage 10 issues in ~15 seconds', color: '#6366f1' },
+                { label: 'Transparent', desc: 'Every SQL query is logged', color: '#a855f7' },
+                { label: 'Your keys', desc: 'Bring your own API credentials', color: '#06b6d4' },
+              ].map(item => (
+                <div key={item.label} style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, textAlign: 'center' }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: item.color, marginBottom: 4 }}>{item.label}</div>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>{item.desc}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* What you will see */}
+          <Section id="dashboard" title="What you will see in the dashboard">
+            <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>
+              After logging in and adding your API keys, you will land on the dashboard. At the top is a header with a repo input field — type any public GitHub repo in <code style={{ background: '#1f2937', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>owner/repo</code> format and click Load. The dashboard has six tabs:
+            </p>
+            <TabCard title="Triage" color="#3b82f6" desc="Shows a table of the latest 10 open issues. Each row has the issue number, title, type badge (bug / feature / docs / other), priority badge (high / medium / low), a suggested label, and a Mark Resolved button that sends a Slack notification." />
+            <TabCard title="Duplicates" color="#eab308" desc="Fetches 20 open issues and finds pairs that describe the same problem. Each pair shows both issue numbers, a confidence level (high / medium / low), and the reason why they were flagged as duplicates." />
+            <TabCard title="Release Notes" color="#22c55e" desc="Pulls the latest merged pull requests and drafts a structured markdown changelog with sections for New Features, Bug Fixes, and Other Changes. You can copy or export as a .md file." />
+            <TabCard title="Slack Insights" color="#a855f7" desc="Matches open GitHub issues to messages in your Slack channel semantically. Requires a Slack bot token and the bot to be invited to your github-issues channel." />
+            <TabCard title="SQL Log" color="#06b6d4" desc="Shows every Coral SQL query that ran in the current session. This is the transparency layer — you can see exactly what data was fetched, no hidden API calls." />
+            <TabCard title="History" color="#ec4899" desc="All past runs stored in MongoDB, filtered by your account. Shows the repo, type of run, result count, timestamp, and the exact SQL query that ran." />
+          </Section>
+
+          {/* How it works */}
+          <Section id="how" title="How it works">
+            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14, marginBottom: 20 }}>
+              The pipeline is simple. Coral runs a SQL query against GitHub. The results are sent to Groq LLM. The AI returns structured JSON. The dashboard renders it.
+            </p>
+            <Step num="01" title="Enter a GitHub repo" desc="Type any public repo in owner/repo format. Click Load." color="#6366f1" />
+            <Step num="02" title="Coral queries GitHub as SQL" desc="No API wrappers. No ETL. Coral turns github.issues into a SQL table and executes the query locally on your machine." color="#a855f7" />
+            <Step num="03" title="Groq LLM classifies" desc="Raw issue data is sent to llama-3.3-70b. It returns type, priority, and a suggested label for each issue as structured JSON." color="#06b6d4" />
+            <Step num="04" title="Dashboard renders results" desc="Results appear in a sortable table. Every run is saved to MongoDB. The SQL log tab shows exactly what ran." color="#22c55e" />
+          </Section>
+
+          {/* Features */}
+          <Section id="features" title="Features">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {[
+                { title: 'Issue Triage', badge: 'Coral SQL', color: '#3b82f6', desc: 'Classifies open issues as bug / feature / docs / other with high / medium / low priority using llama-3.3-70b.' },
+                { title: 'Duplicate Detection', badge: 'LLM', color: '#a855f7', desc: 'Finds pairs of issues describing the same problem with confidence scores and plain-English reasoning.' },
+                { title: 'Release Notes', badge: 'Coral SQL', color: '#22c55e', desc: 'Queries merged PRs via github.pulls and drafts a markdown changelog with New Features, Bug Fixes, and Other Changes.' },
+                { title: 'Slack Insights', badge: 'Cross-source', color: '#eab308', desc: 'Semantic join between GitHub issues and Slack messages. Requires a Slack bot token.' },
+                { title: 'SQL Log', badge: 'Audit', color: '#06b6d4', desc: 'Every Coral query logged per session. Full transparency, no black boxes.' },
+                { title: 'Run History', badge: 'MongoDB', color: '#ec4899', desc: 'All past runs stored per user in MongoDB Atlas. Track how a repo changes over time.' },
+              ].map(f => (
+                <div key={f.title} style={{ padding: '18px 20px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13.5, color: '#f1f5f9' }}>{f.title}</span>
+                    <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: `${f.color}22`, color: f.color, fontWeight: 700, letterSpacing: 0.5 }}>{f.badge}</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* API Keys */}
+          <Section id="api-keys" title="API keys setup">
+            <div style={{ padding: '14px 16px', background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.18)', borderRadius: 10, marginBottom: 20 }}>
+              <div style={{ fontSize: 12, color: '#fde047', fontWeight: 700, marginBottom: 4 }}>Important</div>
+              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+                OSS First Mate uses your own API keys. This keeps you in control of usage limits and ensures your data stays private. Keys are encrypted with AES-256 before storing in MongoDB.
+              </div>
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: 13.5, marginBottom: 16 }}>
+              Click each key below to see step-by-step instructions for getting it.
+            </p>
+            <ApiKeyCard
+              title="Groq API Key"
+              required={true}
+              color="#f97316"
+              link="console.groq.com"
+              linkLabel="console.groq.com"
+              steps={[
+                'Go to console.groq.com',
+                'Click Sign Up and create a free account',
+                'After login, click "API Keys" in the left sidebar',
+                'Click "Create API Key"',
+                'Give it a name like oss-first-mate',
+                'Copy the key — it starts with gsk_',
+                'Go to Settings in the OSS First Mate dashboard and paste it there',
+              ]}
+            />
+            <ApiKeyCard
+              title="GitHub Personal Access Token"
+              required={true}
+              color="#6366f1"
+              link="github.com/settings/tokens"
+              linkLabel="github.com"
+              steps={[
+                'Go to github.com and log in to your account',
+                'Click your profile picture in the top right',
+                'Click Settings from the dropdown',
+                'Scroll down in the left sidebar and click Developer settings',
+                'Click Personal access tokens, then Tokens (classic)',
+                'Click Generate new token (classic)',
+                'Give it a name and set an expiry (90 days is recommended)',
+                'Under Select scopes, check the repo checkbox',
+                'Scroll down and click Generate token',
+                'Copy the token — it starts with ghp_ or github_pat_',
+                'Go to Settings in the OSS First Mate dashboard and paste it there',
+              ]}
+            />
+            <ApiKeyCard
+              title="Slack Bot Token"
+              required={false}
+              color="#a855f7"
+              link="api.slack.com/apps"
+              linkLabel="api.slack.com"
+              steps={[
+                'Go to api.slack.com/apps and click Create New App',
+                'Choose From scratch, give it a name like OSS First Mate Bot',
+                'Select your workspace and click Create App',
+                'In the left sidebar click OAuth and Permissions',
+                'Under Scopes, add Bot Token Scopes: channels:read, channels:history, chat:write',
+                'Click Install to Workspace at the top and confirm',
+                'Copy the Bot User OAuth Token — it starts with xoxb-',
+                'Go to Settings in the OSS First Mate dashboard and paste it there',
+                'In Slack, go to your #github-issues channel and type /invite @OSS First Mate Bot',
+              ]}
+            />
+            <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 8 }}>
+              <div style={{ fontSize: 12, color: '#a5b4fc', fontWeight: 700, marginBottom: 4 }}>Updating your keys</div>
+              <div style={{ fontSize: 13, color: '#6b7280' }}>You can update any key at any time from the Settings page in the dashboard. Changes take effect immediately.</div>
+            </div>
+          </Section>
+
+          {/* Coral */}
+          <Section id="coral" title="How Coral powers it">
+            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14 }}>
+              Coral is an open-source query layer that turns any API into a SQL table. OSS First Mate uses it to query GitHub with no custom API wrappers and no ETL pipelines.
+            </p>
+            <CodeBlock lang="sql" code={`-- Triage: fetch open issues
 SELECT number, title, body, labels, created_at, state
 FROM github.issues
 WHERE owner = 'fastify' AND repo = 'fastify'
@@ -94,7 +436,7 @@ WHERE owner = 'fastify' AND repo = 'fastify'
 ORDER BY created_at DESC
 LIMIT 10;
 
--- Duplicates: broader fetch for similarity check
+-- Duplicate detection
 SELECT number, title, body, labels, created_at
 FROM github.issues
 WHERE owner = 'fastify' AND repo = 'fastify'
@@ -108,359 +450,54 @@ FROM github.pulls
 WHERE owner = 'fastify' AND repo = 'fastify'
   AND state = 'closed'
 ORDER BY number DESC
-LIMIT 15;`,
-}
-
-function CodeBlock({ code, lang }) {
-  const [copied, setCopied] = useState(false)
-  const copy = () => {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  return (
-    <div style={{ position: 'relative', margin: '20px 0', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(99,102,241,0.2)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', background: 'rgba(99,102,241,0.08)', borderBottom: '1px solid rgba(99,102,241,0.1)' }}>
-        <span style={{ fontSize: 11, color: '#6366f1', letterSpacing: 1, textTransform: 'uppercase' }}>{lang}</span>
-        <button onClick={copy} style={{ background: 'transparent', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 6, color: copied ? '#22c55e' : '#a5b4fc', fontSize: 11, padding: '3px 10px', cursor: 'pointer' }}>
-          {copied ? '✓ Copied' : 'Copy'}
-        </button>
-      </div>
-      <pre style={{ margin: 0, padding: '20px', background: 'rgba(3,7,18,0.8)', color: '#e2e8f0', fontSize: 13, lineHeight: 1.7, overflowX: 'auto', fontFamily: '"Fira Code", "Cascadia Code", monospace' }}>
-        <code>{code}</code>
-      </pre>
-    </div>
-  )
-}
-
-function Badge({ children, color }) {
-  const colors = {
-    blue:   { bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.3)',  text: '#93c5fd' },
-    green:  { bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.3)',   text: '#86efac' },
-    purple: { bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.3)',  text: '#d8b4fe' },
-    yellow: { bg: 'rgba(234,179,8,0.12)',  border: 'rgba(234,179,8,0.3)',   text: '#fde047' },
-    cyan:   { bg: 'rgba(6,182,212,0.12)',  border: 'rgba(6,182,212,0.3)',   text: '#67e8f9' },
-  }
-  const c = colors[color] || colors.blue
-  return (
-    <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontSize: 11, fontWeight: 600, letterSpacing: 0.5 }}>
-      {children}
-    </span>
-  )
-}
-
-function FeatureCard({ icon, title, desc, color, badge }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: hovered ? 'rgba(99,102,241,0.06)' : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${hovered ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.06)'}`,
-        borderRadius: 14, padding: '24px',
-        transition: 'all 0.25s ease',
-        transform: hovered ? 'translateY(-3px)' : 'none',
-        cursor: 'default',
-      }}
-    >
-      <div style={{ fontSize: 28, marginBottom: 10 }}>{icon}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9' }}>{title}</span>
-        {badge && <Badge color={color}>{badge}</Badge>}
-      </div>
-      <p style={{ color: '#94a3b8', fontSize: 13.5, lineHeight: 1.6, margin: 0 }}>{desc}</p>
-    </div>
-  )
-}
-
-function Section({ id, title, children }) {
-  return (
-    <section id={id} style={{ marginBottom: 72, scrollMarginTop: 80 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <div style={{ width: 3, height: 28, background: 'linear-gradient(180deg,#6366f1,#a855f7)', borderRadius: 2 }} />
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#f1f5f9', letterSpacing: -0.5 }}>{title}</h2>
-      </div>
-      {children}
-    </section>
-  )
-}
-
-export default function DocsPage({ onGetStarted, onHome }) {
-  const [activeSection, setActiveSection] = useState('what')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(e => { if (e.isIntersecting) setActiveSection(e.target.id) })
-    }, { rootMargin: '-30% 0px -60% 0px' })
-    SECTIONS.forEach(s => {
-      const el = document.getElementById(s.id)
-      if (el) observer.observe(el)
-    })
-    return () => observer.disconnect()
-  }, [])
-
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  return (
-    <div style={{ minHeight: '100vh', background: '#030712', color: '#f1f5f9', fontFamily: '"DM Sans", system-ui, sans-serif', position: 'relative' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
-        @keyframes floatOrb { from { transform: translateY(0px) scale(1); } to { transform: translateY(-40px) scale(1.08); } }
-        @keyframes fadeSlideIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #030712; }
-        ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 3px; }
-        a { color: #a5b4fc; text-decoration: none; }
-        a:hover { color: #818cf8; text-decoration: underline; }
-      `}</style>
-
-      <StarField />
-      <Orb size={500} color="radial-gradient(circle,#6366f1,transparent)" top="-100px" left="-150px" delay={0} />
-      <Orb size={400} color="radial-gradient(circle,#a855f7,transparent)" top="40%" left="70%" delay={3} />
-      <Orb size={300} color="radial-gradient(circle,#06b6d4,transparent)" top="80%" left="10%" delay={5} />
-
-      {/* ── Top navbar ── */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-        background: 'rgba(3,7,18,0.85)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(99,102,241,0.15)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 28px', height: 56,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onHome} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            ← Home
-          </button>
-          <div style={{ width: 1, height: 18, background: '#1f2937' }} />
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>⚓ OSS First Mate</span>
-          <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', fontSize: 11, fontWeight: 600 }}>Docs</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="https://github.com/Atharva-026/oss-first-mate-coral" target="_blank" style={{ color: '#6b7280', fontSize: 13 }}>GitHub</a>
-          <button onClick={onGetStarted} style={{
-            background: 'linear-gradient(135deg,#6366f1,#a855f7)', border: 'none',
-            color: '#fff', borderRadius: 8, padding: '7px 18px', fontSize: 13,
-            fontWeight: 600, cursor: 'pointer',
-          }}>
-            Get Started →
-          </button>
-        </div>
-      </nav>
-
-      <div style={{ display: 'flex', paddingTop: 56 }}>
-
-        {/* ── Sidebar ── */}
-        <aside style={{
-          width: 240, flexShrink: 0, position: 'fixed', top: 56, bottom: 0,
-          overflowY: 'auto', padding: '28px 0', zIndex: 40,
-          background: 'rgba(3,7,18,0.7)', backdropFilter: 'blur(12px)',
-          borderRight: '1px solid rgba(99,102,241,0.1)',
-        }}>
-          <div style={{ padding: '0 20px 12px', fontSize: 10, letterSpacing: 1.5, color: '#4b5563', textTransform: 'uppercase', fontWeight: 600 }}>
-            Documentation
-          </div>
-          {SECTIONS.map(s => (
-            <button key={s.id} onClick={() => scrollTo(s.id)} style={{
-              display: 'block', width: '100%', textAlign: 'left',
-              padding: '9px 20px', fontSize: 13.5, fontWeight: activeSection === s.id ? 600 : 400,
-              color: activeSection === s.id ? '#a5b4fc' : '#6b7280',
-              background: activeSection === s.id ? 'rgba(99,102,241,0.1)' : 'transparent',
-              borderLeft: activeSection === s.id ? '2px solid #6366f1' : '2px solid transparent',
-              border: 'none', borderLeft: activeSection === s.id ? '2px solid #6366f1' : '2px solid transparent',
-              cursor: 'pointer', transition: 'all 0.15s',
-            }}>
-              {s.label}
-            </button>
-          ))}
-          <div style={{ margin: '24px 20px 0', padding: '16px', background: 'rgba(99,102,241,0.06)', borderRadius: 10, border: '1px solid rgba(99,102,241,0.15)' }}>
-            <div style={{ fontSize: 12, color: '#a5b4fc', fontWeight: 600, marginBottom: 6 }}>Need help?</div>
-            <div style={{ fontSize: 11.5, color: '#6b7280', lineHeight: 1.5 }}>Open an issue on GitHub or check the FAQ section below.</div>
-          </div>
-        </aside>
-
-        {/* ── Main content ── */}
-        <main style={{ marginLeft: 240, flex: 1, padding: '48px 64px 80px 64px', maxWidth: 860, animation: 'fadeSlideIn 0.5s ease' }}>
-
-          {/* Hero */}
-          <div style={{ marginBottom: 64 }}>
-            <div style={{ display: 'inline-block', padding: '4px 16px', borderRadius: 999, border: '1px solid rgba(99,102,241,0.35)', background: 'rgba(99,102,241,0.08)', color: '#a5b4fc', fontSize: 11, letterSpacing: 2, marginBottom: 20, textTransform: 'uppercase' }}>
-              Documentation · v1.0
-            </div>
-            <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: -1.5, lineHeight: 1.15, margin: '0 0 16px', background: 'linear-gradient(135deg,#f1f5f9 0%,#a5b4fc 60%,#c084fc 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              OSS First Mate
-            </h1>
-            <p style={{ fontSize: 16, color: '#94a3b8', lineHeight: 1.7, maxWidth: 560, margin: 0 }}>
-              AI-powered GitHub issue triage for open source maintainers — powered by Coral SQL, Groq LLM, and your own API keys.
-            </p>
-          </div>
-
-          {/* What is it */}
-          <Section id="what" title="What is OSS First Mate">
-            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14.5 }}>
-              OSS First Mate is a dashboard that helps open source maintainers manage the never-ending flow of GitHub issues. Instead of manually reading every issue, the tool queries GitHub as a SQL database using <strong style={{ color: '#a5b4fc' }}>Coral</strong>, feeds the results to a large language model, and gives you actionable classification in seconds.
-            </p>
-            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14.5 }}>
-              Every data fetch is transparent — the <strong style={{ color: '#a5b4fc' }}>SQL Log</strong> tab shows the exact queries that ran. No black boxes, no hidden API calls.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 24 }}>
-              {[
-                { icon: '⚡', label: 'Fast', desc: 'Triage 10 issues in ~15 seconds' },
-                { icon: '🔍', label: 'Transparent', desc: 'Every SQL query is logged' },
-                { icon: '🔑', label: 'Your keys', desc: 'Bring your own API credentials' },
-              ].map(item => (
-                <div key={item.label} style={{ padding: 20, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>{item.icon}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: '#f1f5f9', marginBottom: 4 }}>{item.label}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{item.desc}</div>
-                </div>
-              ))}
-            </div>
-          </Section>
-
-          {/* How it works */}
-          <Section id="how" title="How it works">
-            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14.5, marginBottom: 24 }}>
-              The pipeline is simple: Coral runs a SQL query against GitHub → results are sent to Groq's LLM → the AI classifies and returns structured JSON → the dashboard renders it.
-            </p>
-            {[
-              { num: '01', title: 'Enter a GitHub repo', desc: 'Type any public repo in owner/repo format. The agent loads it instantly.', color: '#6366f1' },
-              { num: '02', title: 'Coral queries GitHub as SQL', desc: 'No API wrappers. No ETL. Coral turns github.issues into a SQL table and executes your query locally.', color: '#a855f7' },
-              { num: '03', title: 'Groq LLM classifies', desc: 'Raw issue data is sent to llama-3.3-70b. It returns type (bug/feature/docs), priority, and a suggested label for each issue.', color: '#06b6d4' },
-              { num: '04', title: 'Dashboard renders results', desc: 'Results appear in a sortable table. Every run is saved to MongoDB. The SQL log shows exactly what ran.', color: '#22c55e' },
-            ].map(step => (
-              <div key={step.num} style={{ display: 'flex', gap: 20, marginBottom: 20, padding: 20, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: step.color, fontFamily: 'monospace', flexShrink: 0, paddingTop: 2 }}>{step.num}</div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#f1f5f9', marginBottom: 4 }}>{step.title}</div>
-                  <div style={{ fontSize: 13.5, color: '#94a3b8', lineHeight: 1.6 }}>{step.desc}</div>
-                </div>
-              </div>
-            ))}
-          </Section>
-
-          {/* Features */}
-          <Section id="features" title="Features">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <FeatureCard icon="🗂️" title="Issue Triage" badge="Coral SQL" color="blue" desc="Classifies open issues as bug / feature / docs / other with high / medium / low priority. Runs via Coral SQL on github.issues." />
-              <FeatureCard icon="🔁" title="Duplicate Detection" badge="LLM" color="purple" desc="Fetches 20 issues and uses the LLM to find pairs describing the same problem — with confidence scores and reasoning." />
-              <FeatureCard icon="📝" title="Release Notes" badge="Coral SQL" color="green" desc="Queries merged PRs via github.pulls and drafts a structured markdown changelog — New Features, Bug Fixes, Other Changes." />
-              <FeatureCard icon="💬" title="Slack Insights" badge="Cross-source" color="yellow" desc="Semantic JOIN between GitHub issues and Slack messages. The LLM matches discussions to open issues automatically." />
-              <FeatureCard icon="🔎" title="SQL Log" badge="Audit" color="cyan" desc="Every Coral query that ran is logged in a dedicated tab. Full transparency — you can see exactly what data was fetched." />
-              <FeatureCard icon="🕓" title="Run History" badge="MongoDB" color="blue" desc="All past runs stored in MongoDB Atlas per user. Track how a repo's issue patterns change over time." />
-            </div>
-          </Section>
-
-          {/* Quick start */}
-          <Section id="quickstart" title="Quick start">
-            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14.5, marginBottom: 8 }}>
-              <strong style={{ color: '#f1f5f9' }}>Prerequisites:</strong> Node.js 18+, MongoDB Atlas account (free), Groq API key (free), GitHub Personal Access Token, Coral v0.3+ binary.
-            </p>
-            <p style={{ color: '#94a3b8', fontSize: 13.5, marginBottom: 4 }}>1. Install Coral and clone the repo:</p>
-            <CodeBlock lang="bash" code={CODE.install} />
-            <p style={{ color: '#94a3b8', fontSize: 13.5, marginBottom: 4, marginTop: 20 }}>2. Configure your environment:</p>
-            <CodeBlock lang="env" code={CODE.env} />
-            <p style={{ color: '#94a3b8', fontSize: 13.5, marginBottom: 4, marginTop: 20 }}>3. Run the app:</p>
-            <CodeBlock lang="bash" code={CODE.run} />
-          </Section>
-
-          {/* API keys */}
-          <Section id="api-keys" title="Bring your own API keys">
-            <div style={{ padding: 20, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)', borderRadius: 12, marginBottom: 24 }}>
-              <div style={{ fontSize: 13, color: '#fde047', fontWeight: 600, marginBottom: 6 }}>⚠️ Important</div>
-              <div style={{ fontSize: 13.5, color: '#94a3b8', lineHeight: 1.6 }}>
-                OSS First Mate requires your own API keys. This keeps you in control of your usage limits and ensures your data stays private.
-              </div>
-            </div>
-            {[
-              { name: 'Groq API Key', where: 'console.groq.com', desc: 'Free tier includes 500k tokens/day and 30 requests/minute. Used for issue classification, duplicate detection, and release note generation.', color: '#f97316' },
-              { name: 'GitHub Personal Access Token', where: 'github.com/settings/tokens', desc: 'Classic token with repo:read scope. Used by Coral to query github.issues and github.pulls as SQL tables. Free — no limits beyond GitHub\'s standard rate limits.', color: '#6366f1' },
-              { name: 'MongoDB URI', where: 'cloud.mongodb.com', desc: 'Free M0 cluster is enough. Used to store run history and user sessions. 512MB free storage.', color: '#22c55e' },
-              { name: 'Slack Bot Token (optional)', where: 'api.slack.com/apps', desc: 'Only needed for Slack Insights feature. Create a Slack app, add bot:read scopes, install to your workspace. Invite the bot to your #github-issues channel.', color: '#a855f7' },
-            ].map(key => (
-              <div key={key.name} style={{ padding: 20, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: key.color, flexShrink: 0 }} />
-                  <span style={{ fontWeight: 700, fontSize: 14, color: '#f1f5f9' }}>{key.name}</span>
-                  <a href={`https://${key.where}`} target="_blank" style={{ fontSize: 11, color: '#6b7280', marginLeft: 'auto' }}>
-                    {key.where} ↗
-                  </a>
-                </div>
-                <p style={{ margin: 0, fontSize: 13.5, color: '#94a3b8', lineHeight: 1.6 }}>{key.desc}</p>
-              </div>
-            ))}
-            <p style={{ fontSize: 13, color: '#6b7280', marginTop: 16 }}>
-              After logging in, you can update your API keys anytime from the <strong style={{ color: '#a5b4fc' }}>Settings</strong> page in the dashboard.
+LIMIT 15;`} />
+            <p style={{ color: '#94a3b8', lineHeight: 1.7, fontSize: 14, marginTop: 14 }}>
+              Coral runs locally. Your GitHub token never leaves your machine. Auth, pagination, and rate limits are handled inside Coral. The backend sends SQL and receives JSON.
             </p>
           </Section>
 
-          {/* Coral */}
-          <Section id="coral" title="How Coral powers it">
-            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14.5 }}>
-              <a href="https://github.com/withcoral/coral" target="_blank">Coral</a> is an open-source query layer that turns any API into a SQL table. OSS First Mate uses it to query GitHub — no custom API wrappers, no ETL pipelines.
+          {/* Quickstart */}
+          <Section id="quickstart" title="Try it yourself">
+            <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>
+              The full setup guide is in the <a href="https://github.com/Atharva-026/oss-first-mate-coral" target="_blank" style={{ color: '#6366f1' }}>GitHub README</a>. Here is the quick version:
             </p>
-            <CodeBlock lang="sql" code={CODE.sql} />
-            <p style={{ color: '#94a3b8', lineHeight: 1.8, fontSize: 14.5, marginTop: 16 }}>
-              Coral runs locally on your machine. Your GitHub token never leaves your computer. Auth, pagination, and rate limits are all handled inside Coral — the backend just sends SQL and receives JSON.
-            </p>
-            <div style={{ padding: 20, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, marginTop: 8 }}>
-              <div style={{ fontSize: 13, color: '#a5b4fc', fontWeight: 600, marginBottom: 6 }}>💡 Why this matters</div>
-              <div style={{ fontSize: 13.5, color: '#94a3b8', lineHeight: 1.6 }}>
-                The SQL Log tab in OSS First Mate is a direct reflection of this — every query is auditable. You're not trusting a black box. You're reading SQL. This is the foundation for trustworthy AI agents.
-              </div>
-            </div>
+            <Step num="01" title="Install Coral" desc="Mac: brew install withcoral/tap/coral   |   Windows: download from github.com/withcoral/coral/releases" color="#6366f1" />
+            <Step num="02" title="Add GitHub as a Coral source" desc="Run: coral source add github — then enter your GitHub token when prompted" color="#a855f7" />
+            <Step num="03" title="Clone and install" color="#06b6d4"
+              desc="git clone https://github.com/Atharva-026/oss-first-mate-coral then cd into the folder and run npm install in both server and client folders" />
+            <Step num="04" title="Add your .env file" desc="Copy .env.example to .env and fill in your GROQ_API_KEY, GITHUB_TOKEN, MONGODB_URI, and CORAL_PATH" color="#22c55e" />
+            <Step num="05" title="Run the app" desc="Terminal 1: cd server && nodemon index.js    |    Terminal 2: cd client && npm run dev    |    Open: http://localhost:5173" color="#f97316" />
           </Section>
 
           {/* FAQ */}
           <Section id="faq" title="FAQ">
             {[
-              { q: 'Does it work with private repos?', a: 'Yes, as long as your GitHub Personal Access Token has access to the private repo. Coral will use your token to authenticate.' },
-              { q: 'What happens when I hit the Groq rate limit?', a: 'The dashboard will show an error message. You can wait a minute and retry. Groq free tier allows 30 requests/minute and 500k tokens/day — enough for dozens of triage runs.' },
-              { q: 'Why does Coral need to be installed locally?', a: 'Coral runs as a local binary and handles auth entirely on your machine. Your API tokens never leave your computer. When you deploy to a server, Coral is installed on the server instead.' },
-              { q: 'Can I use a different LLM instead of Groq?', a: 'Not out of the box, but it\'s easy to swap — edit groqService.js and replace the Groq SDK calls with any OpenAI-compatible API.' },
-              { q: 'Release notes show "using GitHub API fallback" — is that a bug?', a: 'This means Coral returned no results for that PR query. This is a known limitation being fixed. The release notes feature still works correctly via the GitHub REST API fallback.' },
-              { q: 'How do I update my API keys after signup?', a: 'Go to Settings in the dashboard (top right menu). You can update any key at any time. Changes take effect immediately.' },
-            ].map((item, i) => (
-              <FaqItem key={i} q={item.q} a={item.a} />
-            ))}
+              { q: 'Does it work with private repos?', a: 'Yes, as long as your GitHub Personal Access Token has access to the private repo. Coral will use your token to authenticate the SQL query.' },
+              { q: 'What happens when I hit the Groq rate limit?', a: 'The dashboard shows an error message. You can make 10 triage, duplicate, or release note requests per hour. The chat widget has a separate limit of 30 messages per hour.' },
+              { q: 'Why does Coral need to be installed locally?', a: 'Coral runs as a local binary and handles auth on your machine. Your API tokens never leave your computer. When you deploy to a server, Coral is installed on the server instead.' },
+              { q: 'Release notes show a fallback message — is that a bug?', a: 'Not a bug. Coral SQL support for merged PRs is being improved. Release notes still work correctly via the GitHub REST API fallback in the meantime.' },
+              { q: 'Can I use a different LLM instead of Groq?', a: 'Not out of the box, but it is straightforward to swap. Edit server/services/groqService.js and replace the Groq SDK calls with any OpenAI-compatible API.' },
+              { q: 'How do I update my API keys?', a: 'Click Settings in the dashboard header (top right). Enter the new value for any key and click Update keys. Changes take effect immediately.' },
+              { q: 'Is my data private?', a: 'Yes. Your API keys are encrypted with AES-256 before storing. Coral runs locally so your GitHub token never leaves your machine. Run history is stored in your own MongoDB Atlas cluster.' },
+            ].map((item, i) => <FaqItem key={i} q={item.q} a={item.a} />)}
           </Section>
 
           {/* CTA */}
-          <div style={{ marginTop: 48, padding: 40, background: 'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(168,85,247,0.1))', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, textAlign: 'center' }}>
-            <div style={{ fontSize: 28, marginBottom: 12 }}>⚓</div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>Ready to triage?</h3>
-            <p style={{ color: '#94a3b8', fontSize: 14, margin: '0 0 24px' }}>Sign in with Google to get started. Your run history is saved automatically.</p>
-            <button onClick={onGetStarted} style={{
-              background: 'linear-gradient(135deg,#6366f1,#a855f7)', border: 'none',
-              color: '#fff', borderRadius: 10, padding: '12px 32px', fontSize: 15,
-              fontWeight: 700, cursor: 'pointer', letterSpacing: 0.3,
-            }}>
-              Get Started — it's free →
+          <div style={{ marginTop: 40, padding: '36px', background: 'linear-gradient(135deg,rgba(99,102,241,0.08),rgba(168,85,247,0.08))', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 14, textAlign: 'center' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <PlanetIcon size={22} color="#fff" />
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>Ready to triage?</h3>
+            <p style={{ color: '#94a3b8', fontSize: 13.5, margin: '0 0 20px' }}>Sign in with Google to get started. Your run history is saved automatically.</p>
+            <button onClick={onGetStarted} style={{ background: 'linear-gradient(135deg,#6366f1,#a855f7)', border: 'none', color: '#fff', borderRadius: 8, padding: '11px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+              Get Started — it is free
             </button>
           </div>
 
         </main>
       </div>
-    </div>
-  )
-}
 
-function FaqItem({ q, a }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: 4 }}>
-      <button onClick={() => setOpen(o => !o)} style={{
-        width: '100%', textAlign: 'left', background: 'none', border: 'none',
-        color: open ? '#a5b4fc' : '#e2e8f0', fontSize: 14, fontWeight: 600,
-        padding: '16px 0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        {q}
-        <span style={{ color: '#6b7280', fontSize: 18, transform: open ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }}>+</span>
-      </button>
-      {open && <p style={{ margin: '0 0 16px', color: '#94a3b8', fontSize: 13.5, lineHeight: 1.7 }}>{a}</p>}
+      <ChatWidget />
     </div>
   )
 }
