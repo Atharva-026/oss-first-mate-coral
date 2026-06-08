@@ -1,0 +1,34 @@
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      args:
+        - GITHUB_TOKEN=${GITHUB_TOKEN}
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - CORAL_PATH=/usr/local/bin/coral
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
