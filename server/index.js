@@ -28,14 +28,11 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Rate limiting for heavy routes
 const apiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, max: 10,
   message: { error: 'Too many requests. You can make 10 requests per hour.' },
   standardHeaders: true, legacyHeaders: false,
 });
-
-// Lighter rate limit for chat — 30 messages per hour
 const chatLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, max: 30,
   message: { error: 'Too many chat messages. Please wait before sending more.' },
@@ -54,19 +51,15 @@ const requireAuth = (req, res, next) => {
   res.status(401).json({ error: 'Please log in to use OSS First Mate' });
 };
 
-// Auth routes — no login needed
-app.use('/auth', require('./routes/auth'));
-
-// Chat — no login needed so docs page users can also use it
-app.use('/api/chat', require('./routes/chat'));
-
-// Protected routes
+app.use('/auth',              require('./routes/auth'));
+app.use('/api/chat',          require('./routes/chat'));
 app.use('/api/triage',        requireAuth, require('./routes/triage'));
 app.use('/api/duplicates',    requireAuth, require('./routes/duplicates'));
 app.use('/api/release-notes', requireAuth, require('./routes/releaseNotes'));
 app.use('/api/history',       requireAuth, require('./routes/history'));
 app.use('/api/slack',         requireAuth, require('./routes/slack'));
 app.use('/api/settings',      requireAuth, require('./routes/settings'));
+app.use('/api/bookmarks',     requireAuth, require('./routes/bookmarks'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
 
