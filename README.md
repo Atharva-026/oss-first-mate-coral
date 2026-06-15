@@ -3,8 +3,6 @@
 AI-powered assistant for open source maintainers. Uses Coral's SQL interface to query GitHub as a database, feeds results to an LLM, and produces actionable intelligence — all in one dashboard.
 
 **Live:** [http://ossfirstmate.duckdns.org](http://ossfirstmate.duckdns.org)  
-**Blog:** [atharva026.hashnode.dev/oss-first-mate-coral-hackathon](https://atharva026.hashnode.dev/oss-first-mate-coral-hackathon)
-
 ---
 
 ## What it does

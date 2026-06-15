@@ -3,7 +3,7 @@ import ChatWidget from './components/ChatWidget'
 
 export default function LoginPage() {
   const handleLogin = () => {
-    window.location.href = `/auth/google`
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth/google`
   };
 
   return (
