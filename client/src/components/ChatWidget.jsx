@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import PlanetIcon from './PlanetIcon'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+const API = import.meta.env.VITE_API_URL || ''
 
 const SUGGESTED = [
   'How do I get a Groq API key?',
