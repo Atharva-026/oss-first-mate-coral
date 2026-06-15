@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import PlanetIcon from './PlanetIcon'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+const API = import.meta.env.VITE_API_URL || ''
 
 function RepoCard({ repo, onLoad, onRemove }) {
   const [owner, name] = repo.split('/')

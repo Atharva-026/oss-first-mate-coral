@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import PlanetIcon from './PlanetIcon'
 import ChatWidget from './ChatWidget'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+const API = import.meta.env.VITE_API_URL || ''
 
 export default function SettingsPage({ user, onBack }) {
   const [keys,    setKeys]    = useState({ groqKey: '', githubToken: '', slackToken: '' })

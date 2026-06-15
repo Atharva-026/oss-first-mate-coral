@@ -28,4 +28,9 @@ Thumbs.db
 data/
 
 # VS Code
-.vscode/
+.vscode/.env.save
+.env.save.1
+server/.env.save
+server/.env~
+.env~
+*.env.save*
