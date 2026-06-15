@@ -6,7 +6,9 @@ server/node_modules/
 # Environment
 .env
 .env.local
-.env.production
+
+# Commit production env (no secrets — just empty relative API URL)
+!client/.env.production
 
 # Coral binary
 coral-bin/
