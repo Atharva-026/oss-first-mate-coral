@@ -18,12 +18,23 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use((req, res, next) => { res.setTimeout(120000); next(); });
 
+if (!process.env.SESSION_SECRET) {
+  console.warn('[security] SESSION_SECRET is not set — using an insecure default. Set SESSION_SECRET in the environment.');
+}
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
-  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'lax' }
+  // `secure` stays false by default so the cookie keeps working over plain HTTP.
+  // Once the site is served over HTTPS, set COOKIE_SECURE=true to harden it.
+  cookie: {
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.COOKIE_SECURE === 'true',
+  }
 }));
 
 app.use(passport.initialize());
@@ -53,7 +64,7 @@ const requireAuth = (req, res, next) => {
 };
 
 app.use('/auth',              require('./routes/auth'));
-app.use('/api/chat',          require('./routes/chat'));
+app.use('/api/chat',          requireAuth, require('./routes/chat'));
 app.use('/api/triage',        requireAuth, require('./routes/triage'));
 app.use('/api/duplicates',    requireAuth, require('./routes/duplicates'));
 app.use('/api/release-notes', requireAuth, require('./routes/releaseNotes'));

@@ -27,14 +27,11 @@ router.post('/', async (req, res) => {
     return res.status(403).json({ error: 'API keys not configured. Please add your keys in Settings.' });
   }
 
-  const originalToken = process.env.GITHUB_TOKEN;
-  process.env.GITHUB_TOKEN = githubToken;
-
   const sql = `SELECT number, title, body, labels, created_at FROM github.issues WHERE owner = '${owner}' AND repo = '${repo}' AND state = 'open' ORDER BY created_at DESC LIMIT 20`;
 
   try {
-    const rawIssues  = await runQuery(sql);
-    process.env.GITHUB_TOKEN = originalToken;
+    // Pass the user's GitHub token to this Coral run only (no global env mutation).
+    const rawIssues  = await runQuery(sql, githubToken);
 
     const trimmed    = rawIssues.map(i => ({ ...i, body: i.body ? i.body.slice(0, 150) : '' }));
     const duplicates = await findDuplicates(trimmed, groqKey);
@@ -49,7 +46,6 @@ router.post('/', async (req, res) => {
 
     res.json({ duplicates, sqlQuery: sql.trim(), total: rawIssues.length });
   } catch (err) {
-    process.env.GITHUB_TOKEN = originalToken;
     res.status(500).json({ error: err.message });
   }
 });

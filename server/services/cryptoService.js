@@ -1,7 +1,14 @@
 const crypto = require('crypto');
 
-// Add ENCRYPTION_KEY to your .env — must be exactly 32 chars
+// Add ENCRYPTION_KEY to your .env — must be exactly 32 chars.
+// NOTE: the fallback below is a publicly-known value committed to the repo.
+// If it is in use, every stored API key is effectively unprotected. The
+// default value is kept (not changed) so that data already encrypted with it
+// stays decryptable — set ENCRYPTION_KEY in the environment to secure new data.
 const KEY = process.env.ENCRYPTION_KEY || 'oss-first-mate-default-key-32chr';
+if (!process.env.ENCRYPTION_KEY) {
+  console.warn('[security] ENCRYPTION_KEY is not set — using the insecure built-in default. Set ENCRYPTION_KEY (32 chars) in the environment.');
+}
 const IV_LENGTH = 16;
 
 const encrypt = (text) => {

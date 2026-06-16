@@ -2,11 +2,18 @@ const { spawn } = require('child_process');
 
 const CORAL_PATH = process.env.CORAL_PATH || 'coral';
 
-const runQuery = (sql) => {
+// `githubToken` (optional) is injected only into THIS child process's env.
+// This avoids mutating the shared process.env.GITHUB_TOKEN, which would race
+// across concurrent requests and leak one user's token into another's query.
+const runQuery = (sql, githubToken) => {
   return new Promise((resolve, reject) => {
+    const childEnv = githubToken
+      ? { ...process.env, GITHUB_TOKEN: githubToken }
+      : process.env;
+
     const child = spawn(CORAL_PATH, ['sql', '--format', 'json', sql], {
       cwd: process.cwd(),
-      env: process.env,
+      env: childEnv,
     });
 
     let stdout = '';

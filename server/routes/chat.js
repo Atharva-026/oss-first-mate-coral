@@ -110,6 +110,16 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'messages array required' });
   }
 
+  // Bound the payload: only keep well-formed messages and cap each one's length
+  // so the shared chat key can't be drained with oversized prompts.
+  const safeMessages = messages
+    .filter(m => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
+    .map(m => ({ role: m.role, content: m.content.slice(0, 4000) }));
+
+  if (safeMessages.length === 0) {
+    return res.status(400).json({ error: 'No valid messages provided' });
+  }
+
   // Use separate chat Groq key — not the user's key
   const chatKey = process.env.GROQ_CHAT_KEY;
   if (!chatKey) {
@@ -122,7 +132,7 @@ router.post('/', async (req, res) => {
       model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        ...messages.slice(-10), // keep last 10 messages for context
+        ...safeMessages.slice(-10), // keep last 10 messages for context
       ],
       temperature: 0.4,
       max_tokens: 500,

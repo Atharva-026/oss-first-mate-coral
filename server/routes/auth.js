@@ -15,9 +15,12 @@ router.get('/google/callback',
 );
 
 // Get logged-in user info (called by frontend on load)
+// Only expose the fields the client actually needs — never the googleId or
+// the encrypted apiKeys blobs stored on the user document.
 router.get('/me', (req, res) => {
-  if (req.user) return res.json(req.user);
-  res.status(401).json({ error: 'Not logged in' });
+  if (!req.user) return res.status(401).json({ error: 'Not logged in' });
+  const { _id, name, email, avatar, hasApiKeys } = req.user;
+  res.json({ _id, name, email, avatar, hasApiKeys });
 });
 
 // Logout
