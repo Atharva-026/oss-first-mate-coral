@@ -19,6 +19,7 @@ const UserSchema = new mongoose.Schema({
       message: 'Maximum 10 bookmarks allowed'
     }
   },
+  feedbackEmailSent: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 

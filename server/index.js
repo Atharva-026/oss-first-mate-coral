@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const express    = require('express');
 const cors       = require('cors');
 const helmet     = require('helmet');
@@ -7,7 +7,10 @@ const session    = require('express-session');
 const MongoStore = require('connect-mongo');
 const passport   = require('./config/passport');
 const rateLimit  = require('express-rate-limit');
+const cron       = require('node-cron');
 const connectDB  = require('./config/db');
+const User       = require('./models/User');
+const { sendFeedbackEmail } = require('./services/emailService');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -72,8 +75,34 @@ app.use('/api/history',       requireAuth, require('./routes/history'));
 app.use('/api/slack',         requireAuth, require('./routes/slack'));
 app.use('/api/settings',      requireAuth, require('./routes/settings'));
 app.use('/api/bookmarks',     requireAuth, require('./routes/bookmarks'));
+// Feedback router handles its own auth per-route (GET /approved is public).
+app.use('/api/feedback',      require('./routes/feedback'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
+
+// ── Daily feedback-email cron ──────────────────────────────────────────────
+// Every day at 09:00 server time, email users who signed up more than a day
+// ago and haven't yet received a feedback request.
+const sendPendingFeedbackEmails = async () => {
+  try {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const users = await User.find({
+      feedbackEmailSent: false,
+      createdAt: { $lt: oneDayAgo },
+    });
+    if (!users.length) return;
+    console.log(`[cron] Sending feedback email to ${users.length} user(s)`);
+    for (const user of users) {
+      await sendFeedbackEmail(user.email, (user.name || '').split(' ')[0] || 'there');
+      user.feedbackEmailSent = true;
+      await user.save();
+    }
+  } catch (err) {
+    console.error('[cron] Feedback email job failed:', err.message);
+  }
+};
+
+cron.schedule('0 9 * * *', sendPendingFeedbackEmails);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -9,6 +9,9 @@ import SlackInsights   from './components/SlackInsights'
 import Bookmarks       from './components/Bookmarks'
 import LandingPage     from './components/LandingPage'
 import DocsPage        from './components/DocsPage'
+import TestimonialsPage from './components/TestimonialsPage'
+import FeedbackForm    from './components/FeedbackForm'
+import AdminFeedback   from './components/AdminFeedback'
 import LoginPage       from './LoginPage'
 import ApiKeysSetup    from './components/ApiKeysSetup'
 import SettingsPage    from './components/SettingsPage'
@@ -33,10 +36,20 @@ const TABS = [
 ]
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || ''
+
+// Open the feedback form directly when arriving from the feedback email link
+// (CLIENT_URL/?feedback=true).
+const getInitialPage = () => {
+  try {
+    if (new URLSearchParams(window.location.search).get('feedback') === 'true') return 'feedback'
+  } catch { /* ignore */ }
+  return 'landing'
+}
 
 export default function App() {
   const [user,      setUser]      = useState(undefined)
-  const [page,      setPage]      = useState('landing')
+  const [page,      setPage]      = useState(getInitialPage)
   const [repo,      setRepo]      = useState(getSavedRepo)
   const [activeTab, setActiveTab] = useState('triage')
   const [sqlLog,    setSqlLog]    = useState([])
@@ -81,8 +94,27 @@ export default function App() {
     setPage('dashboard')
   }
 
-  if (page === 'landing')  return <LandingPage onStart={goToDashboard} onDocs={() => setPage('docs')} />
+  const isAdmin = !!user && !!ADMIN_EMAIL && user.email === ADMIN_EMAIL
+
+  const goToFeedback = () => (user ? setPage('feedback') : setPage('login'))
+
+  if (page === 'landing')  return <LandingPage onStart={goToDashboard} onDocs={() => setPage('docs')} onTestimonials={() => setPage('testimonials')} />
   if (page === 'docs')     return <DocsPage onGetStarted={goToDashboard} onHome={() => setPage('landing')} />
+  if (page === 'testimonials') return (
+    <TestimonialsPage
+      onHome={() => setPage('landing')}
+      onGetStarted={goToDashboard}
+      onWriteFeedback={goToFeedback}
+    />
+  )
+  if (page === 'feedback') {
+    if (!user) return <LoginPage />
+    return <FeedbackForm user={user} onHome={() => setPage('landing')} />
+  }
+  if (page === 'admin-feedback') {
+    if (!isAdmin) return <LandingPage onStart={goToDashboard} onDocs={() => setPage('docs')} onTestimonials={() => setPage('testimonials')} />
+    return <AdminFeedback onHome={() => setPage('dashboard')} />
+  }
   if (page === 'login')    return <LoginPage />
   if (page === 'setup')    return (
     <ApiKeysSetup
@@ -126,6 +158,11 @@ export default function App() {
             <RepoForm repo={repo} setRepo={setRepo} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {user?.avatar && <img src={user.avatar} width={28} height={28} style={{ borderRadius: '50%', border: '1px solid #374151' }} />}
+              {isAdmin && (
+                <button onClick={() => setPage('admin-feedback')} style={{ background: 'none', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, color: '#a5b4fc', padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}>
+                  Moderate
+                </button>
+              )}
               <button onClick={() => setPage('settings')} style={{ background: 'none', border: '1px solid #1f2937', borderRadius: 8, color: '#6b7280', padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}>
                 Settings
               </button>

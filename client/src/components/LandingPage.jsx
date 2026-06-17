@@ -373,7 +373,7 @@ function StepCard({ step, index }) {
   )
 }
 
-export default function LandingPage({ onStart, onDocs }) {
+export default function LandingPage({ onStart, onDocs, onTestimonials }) {
   const hasLaunched = useRef(false)
   const [scrolled, setScrolled] = useState(false)
   const containerRef = useRef(null)
@@ -603,6 +603,22 @@ export default function LandingPage({ onStart, onDocs }) {
                 onMouseLeave={e => { e.currentTarget.style.opacity = 1 }}
               >
                 Docs →
+              </button>
+              <button
+                onClick={onTestimonials}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#93c5fd',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '6px 10px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = 0.9 }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = 1 }}
+              >
+                Testimonials →
               </button>
             </div>
           </div>
