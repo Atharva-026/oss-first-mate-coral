@@ -2,6 +2,8 @@ import Spline from '@splinetool/react-spline'
 import { useRef, useState, useEffect } from 'react'
 import ChatWidget from './ChatWidget'
 
+const API = import.meta.env.VITE_API_URL || ''
+
 const steps = [
   {
     num: '01',
@@ -46,6 +48,26 @@ const steps = [
     color: '#22d3ee',
   },
 ]
+
+const stats = [
+  { value: '9', label: 'AI Features', color: '#60a5fa' },
+  { value: '~15s', label: 'To triage', color: '#a78bfa' },
+  { value: '100%', label: 'Open source', color: '#34d399' },
+  { value: 'Free', label: 'Forever', color: '#22d3ee' },
+]
+
+// ── Large, soft, slowly-drifting ambient orb (matches TestimonialsPage style) ──
+function Orb({ size, color, top, left, right, bottom, delay }) {
+  return (
+    <div style={{
+      position: 'absolute', width: size, height: size, borderRadius: '50%',
+      background: color, top, left, right, bottom,
+      filter: `blur(${size / 2.6}px)`,
+      opacity: 0.26, zIndex: 0, pointerEvents: 'none',
+      animation: `driftOrb 12s ease-in-out ${delay || 0}s infinite alternate`,
+    }} />
+  )
+}
 
 function WireframeSphere({ size = 340 }) {
   const canvasRef = useRef(null)
@@ -291,84 +313,143 @@ function WireframeSphere({ size = 340 }) {
   )
 }
 
-function StepCard({ step, index }) {
+function StepCard({ step, index, revealed }) {
   const [hovered, setHovered] = useState(false)
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0 })
+  const cardRef = useRef(null)
+
+  // 3D tilt toward cursor — max ~8deg, with translateZ lift on hover
+  const handleMove = (e) => {
+    const el = cardRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const px = (e.clientX - rect.left) / rect.width   // 0..1
+    const py = (e.clientY - rect.top) / rect.height
+    setTilt({
+      rx: -(py - 0.5) * 2 * 12,
+      ry: (px - 0.5) * 2 * 12,
+    })
+  }
+
+  const handleLeave = () => {
+    setHovered(false)
+    setTilt({ rx: 0, ry: 0 })
+  }
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
-        position: 'relative',
-        padding: '28px 28px 24px',
-        borderRadius: 16,
-        border: `1px solid ${hovered ? step.color + '55' : 'rgba(255,255,255,0.06)'}`,
-        background: hovered
-          ? `linear-gradient(135deg, ${step.color}0a 0%, rgba(255,255,255,0.02) 100%)`
-          : 'rgba(255,255,255,0.02)',
-        transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
-        cursor: 'default',
-        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
-        boxShadow: hovered ? `0 20px 40px ${step.color}15` : 'none',
+        // scroll-reveal wrapper — staggered 3D rotate-up into place
+        opacity: revealed ? 1 : 0,
+        transform: revealed
+          ? 'perspective(1100px) rotateX(0deg) translateY(0) translateZ(0)'
+          : 'perspective(1100px) rotateX(18deg) translateY(48px) translateZ(-70px)',
+        transition: 'opacity 0.7s ease, transform 0.8s cubic-bezier(0.2,0.7,0.2,1)',
+        transitionDelay: `${index * 0.09}s`,
+        transformOrigin: 'center bottom',
+        perspective: 700,
       }}
     >
-      {/* step number */}
-      <div style={{
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: 3,
-        color: hovered ? step.color : 'rgba(255,255,255,0.2)',
-        marginBottom: 14,
-        fontFamily: 'monospace',
-        transition: 'color 0.3s',
-      }}>
-        {step.num}
+      <div
+        ref={cardRef}
+        onMouseEnter={() => setHovered(true)}
+        onMouseMove={handleMove}
+        onMouseLeave={handleLeave}
+        style={{
+          position: 'relative',
+          padding: '28px 28px 24px',
+          borderRadius: 16,
+          border: `1px solid ${hovered ? step.color + '55' : 'rgba(255,255,255,0.07)'}`,
+          // multi-layer: subtle top highlight + soft outer shadow
+          borderTop: `1px solid ${hovered ? step.color + '70' : 'rgba(255,255,255,0.12)'}`,
+          background: hovered
+            ? `linear-gradient(135deg, ${step.color}12 0%, rgba(255,255,255,0.04) 45%, rgba(255,255,255,0.015) 100%)`
+            : 'rgba(255,255,255,0.025)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          transformStyle: 'preserve-3d',
+          transition: 'transform 0.18s ease-out, box-shadow 0.3s, border-color 0.3s, background 0.3s',
+          cursor: 'default',
+          transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) translateZ(${hovered ? 34 : 0}px)`,
+          boxShadow: hovered
+            ? `0 32px 64px ${step.color}33, 0 0 24px ${step.color}1f, inset 0 1px 0 rgba(255,255,255,0.1)`
+            : 'inset 0 1px 0 rgba(255,255,255,0.04)',
+          willChange: 'transform',
+        }}
+      >
+        {/* inner gradient sheen on hover */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: 16,
+          pointerEvents: 'none',
+          background: 'linear-gradient(150deg, rgba(255,255,255,0.1) 0%, transparent 42%)',
+          opacity: hovered ? 1 : 0,
+          transition: 'opacity 0.35s',
+        }} />
+
+        {/* step number */}
+        <div style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: 3,
+          color: hovered ? step.color : 'rgba(255,255,255,0.2)',
+          marginBottom: 14,
+          fontFamily: 'monospace',
+          transition: 'color 0.3s',
+          transform: 'translateZ(40px)',
+        }}>
+          {step.num}
+        </div>
+
+        {/* dot accent */}
+        <div style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: step.color,
+          marginBottom: 16,
+          opacity: hovered ? 1 : 0.4,
+          boxShadow: hovered ? `0 0 16px ${step.color}, 0 0 4px ${step.color}` : 'none',
+          transition: 'all 0.3s',
+          transform: 'translateZ(38px)',
+        }} />
+
+        <div style={{
+          fontSize: 15,
+          fontWeight: 600,
+          color: hovered ? '#ffffff' : 'rgba(255,255,255,0.75)',
+          marginBottom: 10,
+          letterSpacing: '-0.2px',
+          transition: 'color 0.3s',
+          lineHeight: 1.3,
+          transform: 'translateZ(28px)',
+        }}>
+          {step.title}
+        </div>
+
+        <div style={{
+          fontSize: 13,
+          color: 'rgba(255,255,255,0.38)',
+          lineHeight: 1.7,
+          transition: 'color 0.3s',
+          transform: 'translateZ(18px)',
+        }}>
+          {step.desc}
+        </div>
+
+        {/* corner accent line */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: hovered ? 40 : 0,
+          height: 2,
+          borderRadius: '2px 0 0 0',
+          background: step.color,
+          transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)',
+        }} />
       </div>
-
-      {/* dot accent */}
-      <div style={{
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        backgroundColor: step.color,
-        marginBottom: 16,
-        opacity: hovered ? 1 : 0.4,
-        boxShadow: hovered ? `0 0 12px ${step.color}` : 'none',
-        transition: 'all 0.3s',
-      }} />
-
-      <div style={{
-        fontSize: 15,
-        fontWeight: 600,
-        color: hovered ? '#ffffff' : 'rgba(255,255,255,0.75)',
-        marginBottom: 10,
-        letterSpacing: '-0.2px',
-        transition: 'color 0.3s',
-        lineHeight: 1.3,
-      }}>
-        {step.title}
-      </div>
-
-      <div style={{
-        fontSize: 13,
-        color: 'rgba(255,255,255,0.38)',
-        lineHeight: 1.7,
-        transition: 'color 0.3s',
-      }}>
-        {step.desc}
-      </div>
-
-      {/* corner accent line */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: hovered ? 40 : 0,
-        height: 2,
-        borderRadius: '2px 0 0 0',
-        background: step.color,
-        transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)',
-      }} />
     </div>
   )
 }
@@ -376,7 +457,14 @@ function StepCard({ step, index }) {
 export default function LandingPage({ onStart, onDocs, onTestimonials }) {
   const hasLaunched = useRef(false)
   const [scrolled, setScrolled] = useState(false)
+  const [scrollPct, setScrollPct] = useState(0)
+  const [revealed, setRevealed] = useState(false)
   const containerRef = useRef(null)
+  const heroRef = useRef(null)
+  const heroGroupRef = useRef(null)
+  const howRef = useRef(null)
+  const scrollTicking = useRef(false)
+  const scrollYRef = useRef(0)
 
   const handleSplineEvent = () => {
     if (hasLaunched.current) return
@@ -385,10 +473,87 @@ export default function LandingPage({ onStart, onDocs, onTestimonials }) {
   }
 
   const handleScroll = () => {
-    if (containerRef.current) {
-      setScrolled(containerRef.current.scrollTop > 20)
-    }
+    const el = containerRef.current
+    if (!el) return
+    scrollYRef.current = el.scrollTop   // read every frame for the hero recede loop
+    if (scrollTicking.current) return
+    scrollTicking.current = true
+    requestAnimationFrame(() => {
+      const max = el.scrollHeight - el.clientHeight
+      const pct = max > 0 ? Math.min(1, el.scrollTop / max) : 0
+      setScrolled(el.scrollTop > 20)
+      setScrollPct(pct)
+      scrollTicking.current = false
+    })
   }
+
+  // ── Hero parallax — text group drifts opposite to the cursor (smooth lerp) ──
+  useEffect(() => {
+    const hero = heroRef.current
+    const group = heroGroupRef.current
+    if (!hero || !group) return
+
+    const target = { x: 0, y: 0 }
+    const current = { x: 0, y: 0 }
+    let raf
+
+    const onMove = (e) => {
+      const rect = hero.getBoundingClientRect()
+      target.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2   // -1..1
+      target.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2
+    }
+    const onLeave = () => { target.x = 0; target.y = 0 }
+
+    const tick = () => {
+      current.x += (target.x - current.x) * 0.07
+      current.y += (target.y - current.y) * 0.07
+      // scroll-driven recede — hero text tilts back into depth as you scroll past
+      const h = hero.offsetHeight || 1
+      const sp = Math.min(1, (scrollYRef.current || 0) / h)   // 0..1 over first screen
+      const lift = sp * -90
+      const depth = sp * 220
+      const rot = sp * 12
+      // opposite to mouse — depth against the Spline scene + scroll recede
+      group.style.transform =
+        `translate3d(${-current.x * 28}px, ${-current.y * 20 + lift}px, ${-depth}px) ` +
+        `rotateX(${current.y * 3 + rot}deg) rotateY(${-current.x * 4}deg)`
+      group.style.opacity = String(Math.max(0, 1 - sp * 1.25))
+      raf = requestAnimationFrame(tick)
+    }
+
+    hero.addEventListener('mousemove', onMove)
+    hero.addEventListener('mouseleave', onLeave)
+    raf = requestAnimationFrame(tick)
+
+    return () => {
+      cancelAnimationFrame(raf)
+      hero.removeEventListener('mousemove', onMove)
+      hero.removeEventListener('mouseleave', onLeave)
+    }
+  }, [])
+
+  // ── Visit logging — fire once per browser session ──
+  useEffect(() => {
+    if (sessionStorage.getItem('visit-logged')) return
+    sessionStorage.setItem('visit-logged', '1')
+    fetch(`${API}/api/analytics/visit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: '/' }),
+    }).catch(() => { /* analytics must never break the page */ })
+  }, [])
+
+  // ── Scroll-reveal — trigger the staggered card animation in view ──
+  useEffect(() => {
+    const el = howRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setRevealed(true); observer.disconnect() } },
+      { root: containerRef.current, threshold: 0.15 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <div
@@ -405,7 +570,7 @@ export default function LandingPage({ onStart, onDocs, onTestimonials }) {
       }}
     >
       {/* ── HERO SECTION ── */}
-      <div style={{ width: '100%', height: '100vh', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+      <div ref={heroRef} style={{ width: '100%', height: '100vh', position: 'relative', overflow: 'hidden', flexShrink: 0, perspective: '1000px' }}>
 
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
           <Spline
@@ -417,14 +582,24 @@ export default function LandingPage({ onStart, onDocs, onTestimonials }) {
 
         <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'rgba(3,7,18,0.15)', pointerEvents: 'none' }} />
 
-        <div style={{ position: 'absolute', top: 36, left: 0, right: 0, zIndex: 2, pointerEvents: 'none', textAlign: 'center' }}>
-          <div style={{ display: 'inline-block', padding: '5px 18px', borderRadius: 999, border: '1px solid rgba(99,102,241,0.35)', background: 'rgba(99,102,241,0.08)', color: '#a5b4fc', fontSize: 11, letterSpacing: 2, marginBottom: 14, textTransform: 'uppercase' }}>
+        <div ref={heroGroupRef} style={{ position: 'absolute', top: 36, left: 0, right: 0, zIndex: 2, pointerEvents: 'none', textAlign: 'center', willChange: 'transform' }}>
+          <div style={{ display: 'inline-block', padding: '5px 18px', borderRadius: 999, border: '1px solid rgba(99,102,241,0.35)', background: 'rgba(99,102,241,0.08)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#a5b4fc', fontSize: 11, letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>
             Coral SQL · Groq AI · GitHub · Slack
           </div>
-          <div style={{ fontSize: 42, fontWeight: 700, color: 'white', letterSpacing: -1, lineHeight: 1 }}>
+          <div style={{
+            fontSize: 52,
+            fontWeight: 800,
+            letterSpacing: -1.8,
+            lineHeight: 1,
+            background: 'linear-gradient(135deg, #f1f5f9 0%, #a5b4fc 55%, #c084fc 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            filter: 'drop-shadow(0 6px 30px rgba(99,102,241,0.5)) drop-shadow(0 2px 10px rgba(192,132,252,0.35))',
+          }}>
             OSS First Mate
           </div>
-          <div style={{ fontSize: 14, color: '#6b7280', marginTop: 10, letterSpacing: 0.3 }}>
+          <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 12, letterSpacing: 0.3, fontWeight: 500 }}>
             AI-powered assistant for open source maintainers
           </div>
         </div>
@@ -451,25 +626,86 @@ export default function LandingPage({ onStart, onDocs, onTestimonials }) {
         <div style={{ position: 'absolute', bottom: 0, right: 0, width: 130, height: 44, background: '#030712', zIndex: 3 }} />
       </div>
 
-      {/* ── HOW IT WORKS SECTION ── */}
-      <div style={{ position: 'relative', overflow: 'hidden', backgroundColor: '#030712' }}>
+      {/* ── SOCIAL PROOF / STATS STRIP ── */}
+      <div style={{ position: 'relative', backgroundColor: '#030712', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+        <div style={{
+          maxWidth: 880,
+          margin: '0 auto',
+          padding: '34px 32px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 14,
+          justifyContent: 'center',
+        }}>
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 10,
+                padding: '12px 22px',
+                borderRadius: 999,
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderTop: '1px solid rgba(255,255,255,0.14)',
+                background: 'rgba(255,255,255,0.025)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+              }}
+            >
+              <span style={{
+                fontSize: 18,
+                fontWeight: 800,
+                letterSpacing: -0.5,
+                background: `linear-gradient(135deg, #f1f5f9, ${s.color})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                {s.value}
+              </span>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', letterSpacing: 0.3 }}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-        {/* background gradient wash */}
+      {/* ── HOW IT WORKS SECTION ── */}
+      <div ref={howRef} style={{ position: 'relative', overflow: 'hidden', backgroundColor: '#030712' }}>
+
+        {/* background gradient wash — intensifies as you scroll */}
         <div style={{
           position: 'absolute',
           top: 0,
           left: '50%',
           transform: 'translateX(-50%)',
-          width: '80vw',
-          height: '60vh',
-          background: 'radial-gradient(ellipse at center top, rgba(59,130,246,0.06) 0%, rgba(99,102,241,0.04) 40%, transparent 70%)',
+          width: '95vw',
+          height: '70vh',
+          background: 'radial-gradient(ellipse at center top, rgba(59,130,246,0.14) 0%, rgba(99,102,241,0.09) 38%, rgba(192,132,252,0.04) 60%, transparent 75%)',
+          opacity: 0.6 + scrollPct * 1.1,
+          transition: 'opacity 0.2s linear',
           pointerEvents: 'none',
         }} />
 
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 32px 100px' }}>
+        {/* floating ambient orbs for depth */}
+        <Orb size={460} color="radial-gradient(circle,#6366f1,transparent)" top="6%" left="-120px" delay={0} />
+        <Orb size={360} color="radial-gradient(circle,#a855f7,transparent)" top="48%" right="-90px" delay={4} />
+        <Orb size={300} color="radial-gradient(circle,#06b6d4,transparent)" bottom="4%" left="12%" delay={7} />
+
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto', padding: '80px 32px 100px' }}>
 
           {/* Section header */}
-          <div style={{ textAlign: 'center', marginBottom: 72 }}>
+          <div style={{
+            textAlign: 'center',
+            marginBottom: 72,
+            opacity: revealed ? 1 : 0,
+            transform: revealed
+              ? 'perspective(1200px) rotateX(0deg) translateY(0)'
+              : 'perspective(1200px) rotateX(16deg) translateY(36px)',
+            transformOrigin: 'center bottom',
+            transition: 'opacity 0.7s ease, transform 0.8s cubic-bezier(0.2,0.7,0.2,1)',
+          }}>
             <div style={{
               display: 'inline-block',
               padding: '4px 14px',
@@ -484,7 +720,17 @@ export default function LandingPage({ onStart, onDocs, onTestimonials }) {
             }}>
               How it works
             </div>
-            <h2 style={{ fontSize: 34, fontWeight: 700, color: '#ffffff', letterSpacing: -0.5, lineHeight: 1.2, margin: '0 0 14px' }}>
+            <h2 style={{
+              fontSize: 38,
+              fontWeight: 800,
+              letterSpacing: -0.8,
+              lineHeight: 1.2,
+              margin: '0 0 14px',
+              background: 'linear-gradient(135deg, #f1f5f9 0%, #a5b4fc 55%, #c084fc 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>
               Your repo, queried as SQL
             </h2>
             <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.35)', maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
@@ -546,7 +792,7 @@ export default function LandingPage({ onStart, onDocs, onTestimonials }) {
               maxWidth: 580,
             }}>
               {steps.map((step, i) => (
-                <StepCard key={step.num} step={step} index={i} />
+                <StepCard key={step.num} step={step} index={i} revealed={revealed} />
               ))}
             </div>
           </div>
@@ -555,68 +801,74 @@ export default function LandingPage({ onStart, onDocs, onTestimonials }) {
           <div style={{ textAlign: 'center', marginTop: 72 }}>
             <button
               onClick={onStart}
+              className="ofm-cta"
               style={{
+                position: 'relative',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: '14px 32px',
+                padding: '15px 34px',
                 borderRadius: 12,
                 border: '1px solid rgba(96,165,250,0.4)',
-                background: 'rgba(59,130,246,0.1)',
-                color: '#93c5fd',
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.16), rgba(99,102,241,0.12))',
+                backgroundSize: '200% 200%',
+                color: '#bfdbfe',
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
                 letterSpacing: 0.3,
-                transition: 'all 0.2s',
+                transition: 'all 0.25s',
+                animation: 'pulseGlow 2.8s ease-in-out infinite',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(59,130,246,0.2)'
-                e.currentTarget.style.borderColor = 'rgba(96,165,250,0.7)'
-                e.currentTarget.style.color = '#bfdbfe'
+                e.currentTarget.style.borderColor = 'rgba(96,165,250,0.8)'
+                e.currentTarget.style.color = '#eff6ff'
+                e.currentTarget.style.backgroundPosition = '100% 100%'
                 e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 16px 44px rgba(59,130,246,0.4)'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(59,130,246,0.1)'
                 e.currentTarget.style.borderColor = 'rgba(96,165,250,0.4)'
-                e.currentTarget.style.color = '#93c5fd'
+                e.currentTarget.style.color = '#bfdbfe'
+                e.currentTarget.style.backgroundPosition = '0% 0%'
                 e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = ''
               }}
             >
               Launch the dashboard
               <span style={{ fontSize: 16 }}>→</span>
             </button>
-            <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
+            <div style={{ marginTop: 14, fontSize: 12, color: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
               <span>or click the planet above</span>
               <button
                 onClick={onDocs}
+                className="ofm-link"
                 style={{
+                  position: 'relative',
                   background: 'transparent',
                   border: 'none',
                   color: '#93c5fd',
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
-                  padding: '6px 10px',
+                  padding: '6px 4px',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = 0.9 }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = 1 }}
               >
                 Docs →
               </button>
               <button
                 onClick={onTestimonials}
+                className="ofm-link"
                 style={{
+                  position: 'relative',
                   background: 'transparent',
                   border: 'none',
                   color: '#93c5fd',
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
-                  padding: '6px 10px',
+                  padding: '6px 4px',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = 0.9 }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = 1 }}
               >
                 Testimonials →
               </button>
@@ -630,6 +882,28 @@ export default function LandingPage({ onStart, onDocs, onTestimonials }) {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(6px); }
         }
+        @keyframes driftOrb {
+          from { transform: translate(0, 0) scale(1); }
+          to   { transform: translate(30px, -40px) scale(1.08); }
+        }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.0), 0 8px 30px rgba(59,130,246,0.12); }
+          50%      { box-shadow: 0 0 0 6px rgba(99,102,241,0.08), 0 10px 36px rgba(59,130,246,0.22); }
+        }
+        .ofm-link::after {
+          content: '';
+          position: absolute;
+          left: 4px;
+          right: 4px;
+          bottom: 2px;
+          height: 1px;
+          background: linear-gradient(90deg, #93c5fd, #c084fc);
+          transform: scaleX(0);
+          transform-origin: left;
+          transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        .ofm-link:hover::after { transform: scaleX(1); }
+        .ofm-link:hover { color: #bfdbfe; }
       `}</style>
       <ChatWidget />
     </div>

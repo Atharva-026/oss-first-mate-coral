@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import PlanetIcon from './PlanetIcon'
 import ChatWidget from './ChatWidget'
 
@@ -102,8 +102,37 @@ function Step({ num, title, desc, color }) {
 }
 
 function Section({ id, title, children }) {
+  const ref = useRef(null)
+  const [shown, setShown] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setShown(true); observer.disconnect() } },
+      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <section id={id} style={{ marginBottom: 64, scrollMarginTop: 72 }}>
+    <section
+      ref={ref}
+      id={id}
+      style={{
+        marginBottom: 64,
+        scrollMarginTop: 72,
+        // 3D scroll reveal — rotate up into place as it enters the viewport
+        opacity: shown ? 1 : 0,
+        transform: shown
+          ? 'perspective(1200px) rotateX(0deg) translateY(0)'
+          : 'perspective(1200px) rotateX(14deg) translateY(46px)',
+        transformOrigin: 'center bottom',
+        transition: 'opacity 0.7s ease, transform 0.8s cubic-bezier(0.2,0.7,0.2,1)',
+        willChange: 'transform, opacity',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <div style={{ width: 3, height: 24, background: 'linear-gradient(180deg,#6366f1,#a855f7)', borderRadius: 2, flexShrink: 0 }} />
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#f1f5f9', letterSpacing: -0.4 }}>{title}</h2>
@@ -492,6 +521,18 @@ LIMIT 15;`} />
             <button onClick={onGetStarted} style={{ background: 'linear-gradient(135deg,#6366f1,#a855f7)', border: 'none', color: '#fff', borderRadius: 8, padding: '11px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
               Get Started — it is free
             </button>
+          </div>
+
+          {/* Footer note */}
+          <div style={{
+            textAlign: 'center',
+            padding: '24px 20px',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            marginTop: 40,
+          }}>
+            <span style={{ fontSize: 12, color: '#4b5563', letterSpacing: 0.3 }}>
+              🔒 HTTPS coming soon — custom domain in setup, live by end of month.
+            </span>
           </div>
 
         </main>

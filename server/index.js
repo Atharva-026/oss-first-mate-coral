@@ -77,6 +77,9 @@ app.use('/api/settings',      requireAuth, require('./routes/settings'));
 app.use('/api/bookmarks',     requireAuth, require('./routes/bookmarks'));
 // Feedback router handles its own auth per-route (GET /approved is public).
 app.use('/api/feedback',      require('./routes/feedback'));
+// Analytics router handles its own auth per-route (POST /visit is public,
+// GET /summary is admin-gated).
+app.use('/api/analytics',     require('./routes/analytics'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
 

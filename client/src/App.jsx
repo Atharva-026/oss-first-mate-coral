@@ -12,6 +12,7 @@ import DocsPage        from './components/DocsPage'
 import TestimonialsPage from './components/TestimonialsPage'
 import FeedbackForm    from './components/FeedbackForm'
 import AdminFeedback   from './components/AdminFeedback'
+import AnalyticsPage   from './components/AnalyticsPage'
 import LoginPage       from './LoginPage'
 import ApiKeysSetup    from './components/ApiKeysSetup'
 import SettingsPage    from './components/SettingsPage'
@@ -115,6 +116,10 @@ export default function App() {
     if (!isAdmin) return <LandingPage onStart={goToDashboard} onDocs={() => setPage('docs')} onTestimonials={() => setPage('testimonials')} />
     return <AdminFeedback onHome={() => setPage('dashboard')} />
   }
+  if (page === 'analytics') {
+    if (!isAdmin) return <LandingPage onStart={goToDashboard} onDocs={() => setPage('docs')} onTestimonials={() => setPage('testimonials')} />
+    return <AnalyticsPage onHome={() => setPage('dashboard')} />
+  }
   if (page === 'login')    return <LoginPage />
   if (page === 'setup')    return (
     <ApiKeysSetup
@@ -158,6 +163,11 @@ export default function App() {
             <RepoForm repo={repo} setRepo={setRepo} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {user?.avatar && <img src={user.avatar} width={28} height={28} style={{ borderRadius: '50%', border: '1px solid #374151' }} />}
+              {isAdmin && (
+                <button onClick={() => setPage('analytics')} style={{ background: 'none', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, color: '#a5b4fc', padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}>
+                  Analytics
+                </button>
+              )}
               {isAdmin && (
                 <button onClick={() => setPage('admin-feedback')} style={{ background: 'none', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, color: '#a5b4fc', padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}>
                   Moderate
