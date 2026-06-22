@@ -1,3 +1,5 @@
+// Must be first: initializes Sentry before any other module loads (v8+ API).
+const Sentry     = require('./instrument');
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const express    = require('express');
 const cors       = require('cors');
@@ -86,6 +88,10 @@ app.use('/api/analytics', (req, res, next) => {
 }, require('./routes/analytics'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
+
+// Sentry route-error capture — must come after all routes are mounted. No-op
+// when SENTRY_DSN is unset (Sentry was never initialized in instrument.js).
+Sentry.setupExpressErrorHandler(app);
 
 // ── Daily feedback-email cron ──────────────────────────────────────────────
 // Every day at 09:00 server time, email users who signed up more than a day
