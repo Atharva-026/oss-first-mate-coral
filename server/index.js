@@ -6,13 +6,22 @@ const morgan     = require('morgan');
 const session    = require('express-session');
 const MongoStore = require('connect-mongo');
 const passport   = require('./config/passport');
-const rateLimit  = require('express-rate-limit');
 const cron       = require('node-cron');
 const connectDB  = require('./config/db');
 const User       = require('./models/User');
 const { sendFeedbackEmail } = require('./services/emailService');
+const {
+  expensiveLimiter,
+  standardLimiter,
+  authLimiter,
+  visitLimiter,
+} = require('./middleware/rateLimiters');
 
 const app = express();
+// Behind a single Nginx hop (Docker on EC2). Trust exactly one proxy so
+// express-rate-limit keys on the real client IP via X-Forwarded-For, not the
+// proxy's IP. `trust proxy: true` (blanket) is avoided — it lets clients spoof
+// X-Forwarded-For and bypass rate limiting.
 app.set('trust proxy', 1);
 
 app.use(helmet());
@@ -43,22 +52,6 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-const apiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, max: 10,
-  message: { error: 'Too many requests. You can make 10 requests per hour.' },
-  standardHeaders: true, legacyHeaders: false,
-});
-const chatLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, max: 30,
-  message: { error: 'Too many chat messages. Please wait before sending more.' },
-  standardHeaders: true, legacyHeaders: false,
-});
-
-app.use('/api/triage', apiLimiter);
-app.use('/api/duplicates', apiLimiter);
-app.use('/api/release-notes', apiLimiter);
-app.use('/api/chat', chatLimiter);
-
 connectDB();
 
 const requireAuth = (req, res, next) => {
@@ -66,20 +59,31 @@ const requireAuth = (req, res, next) => {
   res.status(401).json({ error: 'Please log in to use OSS First Mate' });
 };
 
-app.use('/auth',              require('./routes/auth'));
-app.use('/api/chat',          requireAuth, require('./routes/chat'));
-app.use('/api/triage',        requireAuth, require('./routes/triage'));
-app.use('/api/duplicates',    requireAuth, require('./routes/duplicates'));
-app.use('/api/release-notes', requireAuth, require('./routes/releaseNotes'));
-app.use('/api/history',       requireAuth, require('./routes/history'));
-app.use('/api/slack',         requireAuth, require('./routes/slack'));
-app.use('/api/settings',      requireAuth, require('./routes/settings'));
-app.use('/api/bookmarks',     requireAuth, require('./routes/bookmarks'));
+// Auth routes — stricter limiter to curb login/OAuth abuse.
+app.use('/auth',              authLimiter, require('./routes/auth'));
+
+// AI/API-heavy routes (Groq/GitHub) — tight expensive limiter (20/15min).
+app.use('/api/chat',          expensiveLimiter, requireAuth, require('./routes/chat'));
+app.use('/api/triage',        expensiveLimiter, requireAuth, require('./routes/triage'));
+app.use('/api/duplicates',    expensiveLimiter, requireAuth, require('./routes/duplicates'));
+app.use('/api/release-notes', expensiveLimiter, requireAuth, require('./routes/releaseNotes'));
+app.use('/api/slack',         expensiveLimiter, requireAuth, require('./routes/slack'));
+
+// Normal authenticated routes — standard limiter (100/15min).
+app.use('/api/history',       standardLimiter, requireAuth, require('./routes/history'));
+app.use('/api/settings',      standardLimiter, requireAuth, require('./routes/settings'));
+app.use('/api/bookmarks',     standardLimiter, requireAuth, require('./routes/bookmarks'));
 // Feedback router handles its own auth per-route (GET /approved is public).
-app.use('/api/feedback',      require('./routes/feedback'));
+app.use('/api/feedback',      standardLimiter, require('./routes/feedback'));
 // Analytics router handles its own auth per-route (POST /visit is public,
-// GET /summary is admin-gated).
-app.use('/api/analytics',     require('./routes/analytics'));
+// GET /summary is admin-gated). The public visit endpoint gets its own
+// stricter limiter (60/15min) so it can't be spammed; everything else on the
+// router uses the standard limiter. Each request is routed to exactly one
+// limiter to avoid double-counting against two buckets.
+app.use('/api/analytics', (req, res, next) => {
+  if (req.method === 'POST' && req.path === '/visit') return visitLimiter(req, res, next);
+  return standardLimiter(req, res, next);
+}, require('./routes/analytics'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
 
